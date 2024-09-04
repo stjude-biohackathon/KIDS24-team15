@@ -1,0 +1,30 @@
+[package]
+name = "crankshaft"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bollard = "0.17.1"
+clap = { version = "4.5.16", features = ["derive"] }
+futures = "0.3.30"
+indexmap = "2.5.0"
+nonempty = "0.10.0"
+paste = "1.0.15"
+rand = "0.8.5"
+random_word = { version = "0.4.3", features = ["en"] }
+tokio = { version = "1.40.0", features = ["full", "time"] }
+url = "2.5.2"
+
+[lints.rust]
+broken_intra_doc_links = "warn"
+missing_docs = "warn"
+nonstandard-style = "warn"
+rust-2018-idioms = "warn"
+rust-2021-compatibility = "warn"
+rust-2024-compatibility = "warn"
+
+[lints.rustdoc]
+missing_doc_code_examples = "warn"
+
+[lints.clippy]
+missing_docs_in_private_items = "warn"
