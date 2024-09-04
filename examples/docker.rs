@@ -24,5 +24,6 @@ async fn main() {
         .try_build()
         .unwrap();
 
-    docker.submit(task).await;
+    let result = docker.submit(task).await.unwrap();
+    println!("Exit code: {:?}", &result)
 }
