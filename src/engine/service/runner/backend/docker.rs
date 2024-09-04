@@ -1,5 +1,6 @@
 //! A docker runner service.
 
+use std::collections::HashMap;
 use crate::engine::Task;
 
 use std::fs::File;
@@ -51,9 +52,26 @@ impl Docker {
                 ..Default::default()
             });
 
+            let mut host_config = bollard::models::HostConfig::default();
+            if let Some(ram_gb) = task.resources().unwrap().ram_gb() {
+                println!("Setting memory to: {}", ram_gb as i64 * 1024 * 1024 * 1024);
+                host_config.memory = Some((ram_gb * 1024. * 1024. * 1024.) as i64);
+            }
+
+            if let Some(cpu_cores) = task.resources().unwrap().cpu_cores() {
+                host_config.cpu_count = Some(cpu_cores as i64);
+            }
+            
+            if let Some(disk_gb) = task.resources().unwrap().disk_gb() {
+                let mut storage_opt: HashMap<String, String> = HashMap::new();
+                storage_opt.insert("size".to_string(), disk_gb.to_string());
+                host_config.storage_opt = Some(storage_opt);
+            };
+
             let config = Config {
                 image: Some(executor.image()),
                 cmd: Some(executor.args().into_iter().map(|s| s.as_str()).collect()),
+                host_config: Some(host_config),
                 ..Default::default()
             };
 
