@@ -16,6 +16,8 @@ async fn main() {
         .extend_executors(vec![Execution::builder()
             .image("ubuntu")
             .args(&[String::from("echo"), String::from("'hello, world!'")])
+            .stdout("stdout.txt")
+            .stderr("stderr.txt")
             .try_build()
             .unwrap()])
         .unwrap()
