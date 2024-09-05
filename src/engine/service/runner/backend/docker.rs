@@ -12,9 +12,8 @@ use bollard::container::WaitContainerOptions;
 use bollard::errors::Error;
 use bollard::secret::ContainerWaitResponse;
 use bollard::Docker;
-use futures::select;
-use futures::FutureExt;
 use futures::StreamExt;
+use futures::TryStreamExt;
 use nonempty::NonEmpty;
 use random_word::Lang;
 use tokio::sync::oneshot::Sender;
@@ -62,35 +61,38 @@ impl Runner {
                 container_create(&name, execution, &mut client).await;
                 container_start(&name, &mut client).await;
 
-                let mut logs = configure_logs(&name, execution, &mut client);
+                let logs = configure_logs(&name, execution, &mut client);
                 let mut wait = configure_wait(&name, &mut client);
 
-                let status;
-                let mut stdout = String::with_capacity(1 >> 8);
-                let mut stderr = String::with_capacity(1 >> 8);
-
-                loop {
-                    select! {
-                        result = logs.next().fuse() => match result {
-                            Some(Ok(LogOutput::StdOut { message })) => {
-                                stdout.push_str(&String::from_utf8_lossy(message.as_ref()))
+                // Process logs until they stop when container stops
+                let (stdout, stderr) = logs
+                    .try_fold((String::new(), String::new()), |(mut stdout, mut stderr), log| async move {
+                        match log {
+                            LogOutput::StdOut { message } => {
+                                stdout.push_str(&String::from_utf8_lossy(&message));
                             }
-                            Some(Ok(LogOutput::StdErr { message })) => {
-                                stderr.push_str(&String::from_utf8_lossy(message.as_ref()))
+                            LogOutput::StdErr { message } => {
+                                stderr.push_str(&String::from_utf8_lossy(&message));
                             }
-                            Some(Err(e)) => eprintln!("error reading log: {:?}", e),
-                            Some(Ok(_)) | None => {}
-                        },
-                        result = wait.next().fuse() => match result {
-                            Some(Ok(response)) => {
-                                status = response.status_code;
-                                break;
-                            }
-                            Some(Err(e)) => eprintln!("error waiting for container: {e:?}"),
-                            None => unreachable!(),
+                            _ => {}
                         }
-                    }
-                }
+                        Ok((stdout, stderr))
+                    })
+                    .await
+                    .unwrap_or_else(|e| {
+                        eprintln!("Error collecting logs: {:?}", e);
+                        (String::new(), String::new())
+                    });
+
+                // Process container stop
+                let status = wait.next().await
+                    .transpose()
+                    .unwrap_or_else(|e| {
+                        eprintln!("Error waiting for container: {:?}", e);
+                        None
+                    })
+                    .map(|response| response.status_code)
+                    .unwrap_or(-1);
 
                 client.remove_container(&name, None).await.unwrap();
 
