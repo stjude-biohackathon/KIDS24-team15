@@ -17,25 +17,6 @@ pub type BoxedError = Box<dyn std::error::Error>;
 ///   `Logger`) if that is the construct struct wrapped.
 /// * `variant` is the name of the variant in the enum that wraps the concrete
 ///   struct (e.g., `Logger` if the variant is `Self::Logger`).
-///
-/// A simple example:
-///
-/// ```rust
-/// /// Services that can be registered within the engine.
-/// #[derive(Debug)]
-/// pub enum Service {
-///     /// A logging service.
-///     Logger(Logger),
-///
-///     /// A task runner service.
-///     Runner(Runner),
-/// }
-///
-/// impl Service {
-///     as_into_unwrap!(logger, Logger, Logger);
-///     as_into_unwrap!(runner, Runner, Runner);
-/// }
-/// ```
 #[macro_export]
 macro_rules! as_into_unwrap {
     ($suffix:ident, $inner:ty, $variant:ident) => {
