@@ -74,7 +74,6 @@ pub fn strip_leading_whitespace(s: &str, command: bool) -> String {
     result
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
