@@ -9,7 +9,7 @@ fn remove_line_continuations(s: &str) -> String {
         if c == '\\' {
             if let Some(next) = chars.next() {
                 if next == '\n' {
-                    while let Some(ws) = chars.next() {
+                    for ws in chars.by_ref() {
                         if ws == ' ' || ws == '\t' {
                             continue;
                         } else {
