@@ -35,15 +35,15 @@ impl BackendConfig {
         // Replace default flags only if it isn't already set
 
         if let Some(cpu) = self.default_cpu {
-            if !replacements.contains_key("cpu") {
-                replacements.insert("cpu".to_string(), cpu.to_string());
-            }
+            replacements
+                .entry("cpu".to_string())
+                .or_insert(cpu.to_string());
         }
 
         if let Some(ram) = self.default_ram {
-            if !replacements.contains_key("ram") {
-                replacements.insert("cpu".to_string(), ram.to_string());
-            }
+            replacements
+                .entry("ram".to_string())
+                .or_insert(ram.to_string());
         }
 
         match &self.kind {
@@ -109,5 +109,32 @@ mod tests {
             .submit(&mut replacements, "${", "}")
             .expect("Get output from generic backend");
         assert_eq!(output.stdout, b"Hello Kids24\n");
+    }
+
+    #[test]
+    fn generic_config_with_defaults_uses_them() {
+        let config = Config::load_from_file("configs/generic_simple.toml")
+            .expect("Load from example config");
+        let backend = &config.backends[1];
+        let mut replacements = HashMap::new();
+
+        let output = backend
+            .submit(&mut replacements, "${", "}")
+            .expect("Get output from generic backend");
+        assert_eq!(output.stdout, b"I have 4096 mb of ram\n");
+    }
+
+    #[test]
+    fn generic_config_with_defaults_and_parameters_set_uses_parameters() {
+        let config = Config::load_from_file("configs/generic_simple.toml")
+            .expect("Load from example config");
+        let backend = &config.backends[1];
+        let mut replacements = HashMap::new();
+        replacements.insert("ram".to_string(), 2.to_string());
+
+        let output = backend
+            .submit(&mut replacements, "${", "}")
+            .expect("Get output from generic backend");
+        assert_eq!(output.stdout, b"I have 2 mb of ram\n");
     }
 }
