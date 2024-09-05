@@ -54,7 +54,7 @@ fn calculate_leading_whitespace(s: &str) -> usize {
 
 /// Strips leading whitespace from a string.
 pub fn strip_leading_whitespace(s: &str, command: bool) -> String {
-    let s = if command {
+    let s = if !command {
         remove_line_continuations(s)
     } else {
         s.to_string()
