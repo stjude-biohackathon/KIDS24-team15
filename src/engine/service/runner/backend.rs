@@ -7,6 +7,9 @@ use futures::future::BoxFuture;
 use nonempty::NonEmpty;
 use tokio::sync::oneshot::Sender;
 
+pub mod backend_config;
+pub mod generic;
+
 pub use std::fmt::Debug;
 
 use crate::engine::Task;
