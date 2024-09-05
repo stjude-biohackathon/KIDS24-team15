@@ -9,6 +9,7 @@ pub use task::Task;
 use tracing::debug;
 
 use crate::engine::service::runner::backend::docker;
+use crate::engine::service::runner::backend::tes;
 use crate::engine::service::runner::Handle;
 use crate::engine::service::runner::Runner;
 
@@ -27,6 +28,13 @@ impl Engine {
         Ok(Self {
             runner: Runner::new(docker),
         })
+    }
+
+    /// Gets an engine with a default TES backend.
+    pub fn with_default_tes() -> Self {
+        Self {
+            runner: Runner::new(tes::Tes::default()),
+        }
     }
 
     /// Submits a [`Task`] to be executed.

@@ -1,0 +1,10 @@
+[package]
+name = "tes-client"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+reqwest = "0.12.7"
+serde = { version = "1.0.209", features = ["derive"] }
+serde_json = "1.0.128"
+tokio = { version = "1.40.0", features = ["full"] }

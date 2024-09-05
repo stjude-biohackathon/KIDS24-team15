@@ -5,14 +5,14 @@ use std::path::PathBuf;
 use config::ConfigError;
 use serde::{Deserialize, Serialize};
 
-use super::service::runner::backend::backend_config::BackendConfig;
+use crate::engine::service::runner::backend;
 
 /// The config loaded from a global file.
 /// Currently contains just a list of available backends
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     /// All backends that exist
-    pub backends: Vec<BackendConfig>,
+    pub backends: Vec<backend::Config>,
 }
 
 impl Config {
