@@ -67,7 +67,7 @@ impl Runner {
                 // Process logs until they stop when container stops
                 let (stdout, stderr) = logs
                     .try_fold(
-                        (String::new(), String::new()),
+                        (String::with_capacity(1 << 8), String::with_capacity(1 << 8)),
                         |(mut stdout, mut stderr), log| async move {
                             match log {
                                 LogOutput::StdOut { message } => {
