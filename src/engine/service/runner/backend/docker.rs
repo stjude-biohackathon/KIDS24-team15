@@ -11,6 +11,7 @@ use bollard::container::StartContainerOptions;
 use bollard::container::WaitContainerOptions;
 use bollard::errors::Error;
 use bollard::secret::ContainerWaitResponse;
+use bollard::secret::HostConfig;
 use bollard::Docker;
 use futures::future::BoxFuture;
 use futures::FutureExt;
@@ -24,6 +25,7 @@ use crate::engine::service::runner::backend::Backend;
 use crate::engine::service::runner::backend::ExecutionResult;
 use crate::engine::service::runner::backend::Reply;
 use crate::engine::task::Execution;
+use crate::engine::task::Resources;
 use crate::engine::Task;
 
 /// The number of parts in the random name of each Docker container.
@@ -63,7 +65,7 @@ impl Backend for Runner {
             for execution in task.executions() {
                 let name = random_name();
 
-                container_create(&name, execution, &mut client).await;
+                container_create(&name, execution, task.resources(), &mut client).await;
                 container_start(&name, &mut client).await;
 
                 let logs = configure_logs(&name, execution, &mut client);
@@ -142,7 +144,12 @@ fn random_name() -> String {
 }
 
 /// Creates a container using the Docker client.
-async fn container_create(name: &str, execution: &Execution, client: &mut Arc<Docker>) {
+async fn container_create(
+    name: &str,
+    execution: &Execution,
+    resources: Option<&Resources>,
+    client: &mut Arc<Docker>,
+) {
     let options = Some(CreateContainerOptions {
         name,
         ..Default::default()
@@ -151,6 +158,7 @@ async fn container_create(name: &str, execution: &Execution, client: &mut Arc<Do
     let config = Config {
         image: Some(execution.image()),
         cmd: Some(execution.args().into_iter().map(|s| s.as_str()).collect()),
+        host_config: resources.map(HostConfig::from),
         ..Default::default()
     };
 

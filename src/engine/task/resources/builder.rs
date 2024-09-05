@@ -1,11 +1,12 @@
 //! Builders for a [`Resources`].
 
 use nonempty::NonEmpty;
+use tracing::warn;
 
 use crate::engine::task::resources::Resources;
 
 /// A builder for a [`Resources`].
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Builder {
     /// The number of CPU cores requested.
     cpu_cores: Option<u64>,
@@ -64,8 +65,12 @@ impl Builder {
     ///
     /// This will silently overwrite any previously requested amount of disk
     /// space provided to the builder.
-    pub fn disk_gb(mut self, value: impl Into<f64>) -> Self {
-        self.disk_gb = Some(value.into());
+    pub fn disk_gb(self, _: impl Into<f64>) -> Self {
+        warn!(
+            "setting disk space does not work on containers unless \
+            XFS is used on the host machine"
+        );
+
         self
     }
 
