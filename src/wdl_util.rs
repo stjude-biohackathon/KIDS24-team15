@@ -54,13 +54,13 @@ fn calculate_leading_whitespace(s: &str) -> usize {
 
 /// Strips leading whitespace from a string.
 pub fn strip_leading_whitespace(s: &str, command: bool) -> String {
-    let s = if !command {
-        remove_line_continuations(s)
-    } else {
+    let s_owned = if command {
         s.to_string()
+    } else {
+        remove_line_continuations(s)
     };
-    let leading_whitespace = calculate_leading_whitespace(&s);
-    let result = s
+    let leading_whitespace = calculate_leading_whitespace(&s_owned);
+    let result = s_owned
         .lines()
         .map(|line| {
             if line.len() >= leading_whitespace {
@@ -100,21 +100,21 @@ second line";
     }
 
     #[test]
-    fn test_strip_leading_whitespace() {
-        let input = "    first line is indented 4 spaces
-        second line is indented 8 spaces
-    third line is indented 4 spaces";
-        let expected = "first line is indented 4 spaces\n    second line is indented 8 spaces\nthird line is indented 4 spaces";
-        assert_eq!(strip_leading_whitespace(input, false), expected);
-    }
-
-    #[test]
-    fn test_strip_leading_whitespace_with_line_continuations() {
+    fn test_strip_leading_whitespace_not_in_command() {
         let input = "    first line is indented 4 spaces \
                      still first line
         second line is indented 8 spaces
     third line is indented 4 spaces";
         let expected = "first line is indented 4 spaces still first line\n    second line is indented 8 spaces\nthird line is indented 4 spaces";
+        assert_eq!(strip_leading_whitespace(input, false), expected);
+    }
+
+    #[test]
+    fn test_strip_leading_whitespace_in_command() {
+        let input = "    first line is indented 4 spaces and trails a backslash \\
+        second line is indented 8 spaces
+    third line is indented 4 spaces";
+        let expected = "first line is indented 4 spaces and trails a backslash \\\n    second line is indented 8 spaces\nthird line is indented 4 spaces";
         assert_eq!(strip_leading_whitespace(input, true), expected);
     }
 }
