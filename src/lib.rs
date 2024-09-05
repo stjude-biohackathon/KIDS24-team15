@@ -2,6 +2,9 @@
 
 pub mod engine;
 
+/// A boxed [`std::error::Error`].
+pub type BoxedError = Box<dyn std::error::Error>;
+
 /// Generates the `as_`, `into_`, and `unwrap_` methods commonly found on enum
 /// wrappers.o
 ///
