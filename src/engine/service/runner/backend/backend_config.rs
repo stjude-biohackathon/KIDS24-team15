@@ -86,6 +86,7 @@ pub enum BackendType {
 /// Extra attributes for Generic Backends
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GenericBackendConfig {
+    /// The script command that will be run on submit
     command: String,
 }
 
