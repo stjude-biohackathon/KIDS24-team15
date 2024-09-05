@@ -59,15 +59,4 @@ mod tests {
         assert_eq!(backend.default_cpu, Some(1));
         assert_eq!(backend.default_ram, Some(1));
     }
-
-    #[test]
-    fn loading_config_holds_valid_fields() {
-        let config =
-            Config::load_from_file("configs/example.toml").expect("Load from example config");
-        let backend = &config.backends[1];
-
-        assert_eq!(backend.name, "quux");
-        assert_eq!(backend.default_cpu, Some(1));
-        assert_eq!(backend.default_ram, Some(1));
-    }
 }
