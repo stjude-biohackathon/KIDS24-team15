@@ -5,6 +5,7 @@ use futures::stream::FuturesUnordered;
 use tokio::sync::oneshot::Receiver;
 
 use crate::engine::service::runner::backend::docker;
+use crate::engine::service::runner::backend::Backend;
 use crate::engine::service::runner::backend::Reply;
 use crate::engine::Task;
 
@@ -21,7 +22,7 @@ pub struct Handle {
 #[derive(Debug)]
 pub struct Runner {
     /// The task runner itself.
-    runner: docker::Runner,
+    runner: Box<dyn Backend>,
 
     /// The list of submitted tasks.
     pub tasks: FuturesUnordered<BoxFuture<'static, ()>>,
@@ -35,7 +36,7 @@ impl Runner {
     /// If initialization of the [`bollard`](bollard) client fails.
     pub fn docker() -> Self {
         Self {
-            runner: docker::Runner::try_new().unwrap(),
+            runner: Box::new(docker::Runner::try_new().unwrap()),
             tasks: Default::default(),
         }
     }
@@ -43,7 +44,8 @@ impl Runner {
     /// Submits a task to be executed by the backend.
     pub fn submit(&self, task: Task) -> Handle {
         let (tx, rx) = tokio::sync::oneshot::channel();
-        self.tasks.push(Box::pin(self.runner.run(task, tx)));
+        let a = Box::pin(self.runner.run(task, tx));
+        self.tasks.push(a);
 
         Handle { callback: rx }
     }
