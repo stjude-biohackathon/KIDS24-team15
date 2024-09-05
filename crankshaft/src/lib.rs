@@ -1,7 +1,6 @@
 //! Crankshaft.
 
 pub mod engine;
-pub mod wdl_util;
 
 /// A boxed [`std::error::Error`].
 pub type BoxedError = Box<dyn std::error::Error>;
