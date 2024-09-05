@@ -2,6 +2,7 @@
 //!
 //! Currently that is whitespace stripping.
 
+/// Removes line continuations from a string.
 fn remove_line_continuations(s: &str) -> String {
     let mut result = String::new();
     let mut chars = s.chars();
@@ -25,6 +26,7 @@ fn remove_line_continuations(s: &str) -> String {
     result
 }
 
+/// Calculates the leading whitespace of a string.
 fn calculate_leading_whitespace(s: &str) -> usize {
     let mut min_leading_whitespace = usize::MAX;
     let mut parsing_leading_whitespace = true;
