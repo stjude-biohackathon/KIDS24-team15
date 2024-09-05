@@ -12,6 +12,9 @@ nonempty = "0.10.0"
 paste = "1.0.15"
 rand = "0.8.5"
 random_word = { version = "0.4.3", features = ["en"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.8"  # Optional, if you want YAML support
 tokio = { version = "1.40.0", features = ["full", "time"] }
 url = "2.5.2"
 
