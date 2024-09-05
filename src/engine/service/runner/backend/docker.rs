@@ -66,18 +66,21 @@ impl Runner {
 
                 // Process logs until they stop when container stops
                 let (stdout, stderr) = logs
-                    .try_fold((String::new(), String::new()), |(mut stdout, mut stderr), log| async move {
-                        match log {
-                            LogOutput::StdOut { message } => {
-                                stdout.push_str(&String::from_utf8_lossy(&message));
+                    .try_fold(
+                        (String::new(), String::new()),
+                        |(mut stdout, mut stderr), log| async move {
+                            match log {
+                                LogOutput::StdOut { message } => {
+                                    stdout.push_str(&String::from_utf8_lossy(&message));
+                                }
+                                LogOutput::StdErr { message } => {
+                                    stderr.push_str(&String::from_utf8_lossy(&message));
+                                }
+                                _ => {}
                             }
-                            LogOutput::StdErr { message } => {
-                                stderr.push_str(&String::from_utf8_lossy(&message));
-                            }
-                            _ => {}
-                        }
-                        Ok((stdout, stderr))
-                    })
+                            Ok((stdout, stderr))
+                        },
+                    )
                     .await
                     .unwrap_or_else(|e| {
                         eprintln!("Error collecting logs: {:?}", e);
@@ -85,7 +88,9 @@ impl Runner {
                     });
 
                 // Process container stop
-                let status = wait.next().await
+                let status = wait
+                    .next()
+                    .await
                     .transpose()
                     .unwrap_or_else(|e| {
                         eprintln!("Error waiting for container: {:?}", e);
