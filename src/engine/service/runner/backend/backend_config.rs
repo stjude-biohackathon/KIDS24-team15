@@ -2,7 +2,7 @@
 
 use std::{
     collections::HashMap,
-    process::{Command, Output, Stdio},
+    process::{Command, Output},
 };
 
 use serde::{Deserialize, Serialize};
@@ -58,9 +58,6 @@ impl BackendConfig {
                 let output = Command::new("sh")
                     .arg("-c")
                     .arg(command_str)
-                    // We could set stdout and stderr to be the same file system we did with Docker
-                    .stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit())
                     .output()
                     .expect("Failed to run command");
                 Some(output)
@@ -108,7 +105,9 @@ mod tests {
         let mut replacements = HashMap::new();
         replacements.insert("name".to_string(), "Kids24".to_string());
 
-        let output = backend.submit(&mut replacements, "${", "}");
-        assert!(output.is_some());
+        let output = backend
+            .submit(&mut replacements, "${", "}")
+            .expect("Get output from generic backend");
+        assert_eq!(output.stdout, b"Hello Kids24\n");
     }
 }
