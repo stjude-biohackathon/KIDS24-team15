@@ -46,7 +46,7 @@ mod tests {
         let config =
             Config::load_from_file("configs/example.toml").expect("Load from example config");
 
-        assert_eq!(config.backends.len(), 2)
+        assert_eq!(config.backends.len(), 3)
     }
 
     #[test]
