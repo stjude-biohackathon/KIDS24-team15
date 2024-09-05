@@ -54,7 +54,6 @@ impl Docker {
 
             let mut host_config = bollard::models::HostConfig::default();
             if let Some(ram_gb) = task.resources().unwrap().ram_gb() {
-                println!("Setting memory to: {}", ram_gb as i64 * 1024 * 1024 * 1024);
                 host_config.memory = Some((ram_gb * 1024. * 1024. * 1024.) as i64);
             }
 
