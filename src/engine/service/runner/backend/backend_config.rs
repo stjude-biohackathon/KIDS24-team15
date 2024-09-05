@@ -8,7 +8,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 /// The left placeholder for the backend config
-const LEFT_PLACEHOLDER: &str = "${";
+const LEFT_PLACEHOLDER: &str = "~{";
 /// The right placeholder for the backend config
 const RIGHT_PLACEHOLDER: &str = "}";
 
@@ -156,7 +156,7 @@ mod tests {
             super::BackendType::Generic(generic) => {
                 let command_str = generic.command.clone();
                 let subbed = super::substitute_placeholders(&command_str, &substitutions);
-                assert_eq!(subbed, "    bsub -q compbio -n 1 -g crankshaft -R \"rusage[mem=${memory}] span[hosts=1]\" -cwd ${cwd} -o ${cwd}/execution/stdout.lsf -e ${cwd}/execution/stderr.lsf /usr/bin/env bash ${script}\n");
+                assert_eq!(subbed, "    bsub -q compbio -n 1 -g crankshaft -R \"rusage[mem=~{memory}] span[hosts=1]\" -cwd ~{cwd} -o ~{cwd}/execution/stdout.lsf -e ~{cwd}/execution/stderr.lsf /usr/bin/env bash ~{script}\n");
             }
             _ => panic!("Expected generic backend"),
         }
