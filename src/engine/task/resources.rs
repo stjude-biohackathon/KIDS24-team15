@@ -2,6 +2,9 @@
 
 mod builder;
 
+use std::collections::HashMap;
+
+use bollard::secret::HostConfig;
 pub use builder::Builder;
 
 use nonempty::NonEmpty;
@@ -49,5 +52,26 @@ impl Resources {
     /// The set of requested zones.
     pub fn zones(&self) -> Option<&NonEmpty<String>> {
         self.zones.as_ref()
+    }
+}
+
+impl From<&Resources> for HostConfig {
+    fn from(resources: &Resources) -> Self {
+        let mut host_config = HostConfig::default();
+        if let Some(ram_gb) = resources.ram_gb() {
+            host_config.memory = Some((ram_gb * 1024. * 1024. * 1024.) as i64);
+        }
+
+        if let Some(cpu_cores) = resources.cpu_cores() {
+            host_config.cpu_count = Some(cpu_cores as i64);
+        }
+
+        if let Some(disk_gb) = resources.disk_gb() {
+            let mut storage_opt: HashMap<String, String> = HashMap::new();
+            storage_opt.insert("size".to_string(), disk_gb.to_string());
+            host_config.storage_opt = Some(storage_opt);
+        }
+
+        host_config
     }
 }
