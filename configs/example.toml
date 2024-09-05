@@ -1,0 +1,15 @@
+[[backends]]
+name = "test"
+kind = "Generic"
+command = "echo ${name}"
+
+[[backends]]
+name = "quux"
+kind = "Generic"
+command = "bsub ${script}"
+default-cpu = 1
+default-ram = 1
+
+[[backends]]
+name = "docker"
+kind = "Docker"

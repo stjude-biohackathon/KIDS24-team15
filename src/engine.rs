@@ -1,5 +1,6 @@
 //!  Engine.
 
+pub mod config;
 pub mod service;
 pub mod task;
 
@@ -7,6 +8,7 @@ use futures::future::join_all;
 pub use task::Task;
 use tracing::debug;
 
+use crate::engine::service::runner::backend::docker;
 use crate::engine::service::runner::Handle;
 use crate::engine::service::runner::Runner;
 
@@ -18,6 +20,15 @@ pub struct Engine {
 }
 
 impl Engine {
+    /// Gets an engine with a Docker backend.
+    pub fn with_docker() -> docker::Result<Self> {
+        let docker = docker::Runner::try_new()?;
+
+        Ok(Self {
+            runner: Runner::new(docker),
+        })
+    }
+
     /// Submits a [`Task`] to be executed.
     ///
     /// A [`Handle`] is returned, which contains a channel that can be awaited
@@ -35,8 +46,6 @@ impl Engine {
 
 impl Default for Engine {
     fn default() -> Self {
-        Self {
-            runner: Runner::docker(),
-        }
+        Self::with_docker().expect("could not initialize engine")
     }
 }
