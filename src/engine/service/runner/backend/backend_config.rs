@@ -36,6 +36,8 @@ pub struct BackendConfig {
     /// The default ram if present
     #[serde(rename = "default-ram", default)]
     pub default_ram: Option<u32>,
+    /// The runtime attributes for the backend
+    pub runtime_attrs: Option<HashMap<String, String>>,
 }
 
 impl BackendConfig {
@@ -144,5 +146,23 @@ mod tests {
             .submit(&mut substitutions)
             .expect("Get output from generic backend");
         assert_eq!(output.stdout, b"I have 2 mb of ram\n");
+    }
+
+    #[test]
+    fn lsf_example() {
+        let config = Config::load_from_file("configs/lsf.toml")
+            .expect("Load from example config");
+        let backend = &config.backends[0];
+        let mut substitutions = HashMap::new();
+        substitutions.extend(backend.runtime_attrs.clone().unwrap());
+
+        match &backend.kind {
+            super::BackendType::Generic(generic) => {
+                let command_str = generic.command.clone();
+                let subbed = super::substitute_placeholders(&command_str, &substitutions);
+                assert_eq!(subbed, "    bsub -q compbio -n 1 -g crankshaft -R \"rusage[mem=${memory}] span[hosts=1]\" -cwd ${cwd} -o ${cwd}/execution/stdout.lsf -e ${cwd}/execution/stderr.lsf /usr/bin/env bash ${script}\n");
+            }
+            _ => panic!("Expected generic backend"),
+        }
     }
 }

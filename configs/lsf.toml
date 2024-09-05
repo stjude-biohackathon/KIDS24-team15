@@ -1,0 +1,15 @@
+[[Backends]]
+name = "LSF"
+kind = "Generic"
+command = """
+    bsub \
+        -q ${lsf_queue} \
+        -n ${cpu} \
+        -g ${lsf_job_group} \
+        -R "rusage[mem=${memory}] span[hosts=${hosts}]" \
+        -cwd ${cwd} \
+        -o ${cwd}/execution/stdout.lsf \
+        -e ${cwd}/execution/stderr.lsf \
+        /usr/bin/env bash ${script}
+"""
+runtime_attrs = { lsf_queue = "compbio", cpu = 1, lsf_job_group = "crankshaft", hosts = 1 }
