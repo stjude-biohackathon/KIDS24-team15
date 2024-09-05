@@ -10,10 +10,7 @@ use serde::{Deserialize, Serialize};
 const LEFT_PLACEHOLDER: &str = "${";
 const RIGHT_PLACEHOLDER: &str = "}";
 
-fn substitute_placeholders(
-    s: &str,
-    substitutions: &HashMap<String, String>,
-) -> String {
+fn substitute_placeholders(s: &str, substitutions: &HashMap<String, String>) -> String {
     let mut result = s.to_string();
     for (key, value) in substitutions {
         let placeholder_key = format!("{}{}{}", LEFT_PLACEHOLDER, key, RIGHT_PLACEHOLDER);
@@ -43,10 +40,7 @@ pub struct BackendConfig {
 impl BackendConfig {
     /// Submits a backend based on its config. Likely this method will be removed and the branch for Generic will be moved to GenericBackend's submit method.
     /// Instead of this method we should have a to_backend() method or something similar that creates a Box<dyn Backend> based on config.
-    pub fn submit(
-        &self,
-        substitutions: &mut HashMap<String, String>,
-    ) -> Option<Output> {
+    pub fn submit(&self, substitutions: &mut HashMap<String, String>) -> Option<Output> {
         // Replace default flags only if it isn't already set
 
         if let Some(cpu) = self.default_cpu {
@@ -150,8 +144,7 @@ mod tests {
 
     #[test]
     fn lsf_example() {
-        let config = Config::load_from_file("configs/lsf.toml")
-            .expect("Load from example config");
+        let config = Config::load_from_file("configs/lsf.toml").expect("Load from example config");
         let backend = &config.backends[0];
         let mut substitutions = HashMap::new();
         substitutions.extend(backend.runtime_attrs.clone().unwrap());
