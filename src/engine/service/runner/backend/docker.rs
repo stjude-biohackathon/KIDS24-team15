@@ -1,8 +1,8 @@
 //! A docker runner service.
 
-use std::future::Future;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use bollard::container::Config;
 use bollard::container::CreateContainerOptions;
 use bollard::container::LogOutput;
@@ -12,12 +12,15 @@ use bollard::container::WaitContainerOptions;
 use bollard::errors::Error;
 use bollard::secret::ContainerWaitResponse;
 use bollard::Docker;
+use futures::future::BoxFuture;
+use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use nonempty::NonEmpty;
 use random_word::Lang;
 use tokio::sync::oneshot::Sender;
 
+use crate::engine::service::runner::backend::Backend;
 use crate::engine::service::runner::backend::ExecutionResult;
 use crate::engine::service::runner::backend::Reply;
 use crate::engine::task::Execution;
@@ -47,9 +50,11 @@ impl Runner {
         let inner = Docker::connect_with_defaults().map(Arc::new)?;
         Ok(Self { client: inner })
     }
+}
 
-    /// Runs a task.
-    pub fn run(&self, task: Task, cb: Sender<Reply>) -> impl Future<Output = ()> {
+#[async_trait]
+impl Backend for Runner {
+    fn run(&self, task: Task, cb: Sender<Reply>) -> BoxFuture<'static, ()> {
         let mut client = self.client.clone();
 
         async move {
@@ -124,6 +129,7 @@ impl Runner {
                 executions: results.expect("at least one execution to be run"),
             });
         }
+        .boxed()
     }
 }
 

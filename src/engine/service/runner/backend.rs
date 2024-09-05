@@ -1,11 +1,15 @@
 //! Supported backends.
 
 pub mod docker;
+use async_trait::async_trait;
 pub use docker::Runner;
+use futures::future::BoxFuture;
 use nonempty::NonEmpty;
+use tokio::sync::oneshot::Sender;
 
 pub use std::fmt::Debug;
 
+use crate::engine::Task;
 use crate::BoxedError;
 
 /// A [`Result`](std::result::Result) with a [`BoxedError`]
@@ -32,4 +36,8 @@ pub struct Reply {
 }
 
 /// An execution backend.
-pub trait Backend: Debug + Send + 'static {}
+#[async_trait]
+pub trait Backend: Debug + Send + 'static {
+    /// Runs a task in a backend;
+    fn run(&self, task: Task, cb: Sender<Reply>) -> BoxFuture<'static, ()>;
+}
