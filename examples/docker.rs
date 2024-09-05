@@ -16,11 +16,14 @@ async fn main() {
         .extend_executors(vec![Execution::builder()
             .image("ubuntu")
             .args(&[String::from("echo"), String::from("'hello, world!'")])
+            .stdout("stdout.txt")
+            .stderr("stderr.txt")
             .try_build()
             .unwrap()])
         .unwrap()
         .try_build()
         .unwrap();
 
-    docker.submit(task).await;
+    let result = docker.submit(task).await.unwrap();
+    println!("Exit code: {:?}", &result)
 }
