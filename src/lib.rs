@@ -1,6 +1,7 @@
 //! Crankshaft.
 
 pub mod engine;
+pub mod wdl_util;
 
 /// Generates the `as_`, `into_`, and `unwrap_` methods commonly found on enum
 /// wrappers.o
