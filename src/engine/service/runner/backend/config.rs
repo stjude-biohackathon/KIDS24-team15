@@ -1,11 +1,11 @@
 //! Configuration for different types of backends
 
-use std::{
-    collections::HashMap,
-    process::{Command, Output},
-};
+use std::collections::HashMap;
+use std::process::Command;
+use std::process::Output;
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// The left placeholder for the backend config
 const LEFT_PLACEHOLDER: &str = "~{";
@@ -24,7 +24,7 @@ fn substitute_placeholders(s: &str, substitutions: &HashMap<String, String>) -> 
 
 /// Configuration for an arbitrary backend
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct BackendConfig {
+pub struct Config {
     /// The backend's name
     pub name: String,
     /// The backend's type
@@ -40,7 +40,7 @@ pub struct BackendConfig {
     pub runtime_attrs: Option<HashMap<String, String>>,
 }
 
-impl BackendConfig {
+impl Config {
     /// Submits a backend based on its config. Likely this method will be removed and the branch for Generic will be moved to GenericBackend's submit method.
     /// Instead of this method we should have a to_backend() method or something similar that creates a Box<dyn Backend> based on config.
     pub fn submit(&self, substitutions: &mut HashMap<String, String>) -> Option<Output> {
@@ -66,7 +66,7 @@ impl BackendConfig {
                     .arg("-c")
                     .arg(command_str)
                     .output()
-                    .expect("Failed to run command");
+                    .expect("failed to run command");
                 Some(output)
             }
             BackendType::Docker(_docker) => {
@@ -107,41 +107,41 @@ mod tests {
     #[test]
     fn simple_generic_config_loads_and_runs() {
         let config = Config::load_from_file("configs/generic_simple.toml")
-            .expect("Load from example config");
+            .expect("load from example config");
         let backend = &config.backends[0];
         let mut substitutions = HashMap::new();
         substitutions.insert("name".to_string(), "Kids24".to_string());
 
         let output = backend
             .submit(&mut substitutions)
-            .expect("Get output from generic backend");
+            .expect("get output from generic backend");
         assert_eq!(output.stdout, b"Hello Kids24\n");
     }
 
     #[test]
     fn generic_config_with_defaults_uses_them() {
         let config = Config::load_from_file("configs/generic_simple.toml")
-            .expect("Load from example config");
+            .expect("load from example config");
         let backend = &config.backends[1];
         let mut substitutions = HashMap::new();
 
         let output = backend
             .submit(&mut substitutions)
-            .expect("Get output from generic backend");
+            .expect("get output from generic backend");
         assert_eq!(output.stdout, b"I have 4096 mb of ram\n");
     }
 
     #[test]
     fn generic_config_with_defaults_and_parameters_set_uses_parameters() {
         let config = Config::load_from_file("configs/generic_simple.toml")
-            .expect("Load from example config");
+            .expect("load from example config");
         let backend = &config.backends[1];
         let mut substitutions = HashMap::new();
         substitutions.insert("ram".to_string(), 2.to_string());
 
         let output = backend
             .submit(&mut substitutions)
-            .expect("Get output from generic backend");
+            .expect("get output from generic backend");
         assert_eq!(output.stdout, b"I have 2 mb of ram\n");
     }
 
@@ -158,7 +158,7 @@ mod tests {
                 let subbed = super::substitute_placeholders(&command_str, &substitutions);
                 assert_eq!(subbed, "    bsub -q compbio -n 1 -g crankshaft -R \"rusage[mem=~{memory}] span[hosts=1]\" -cwd ~{cwd} -o ~{cwd}/execution/stdout.lsf -e ~{cwd}/execution/stderr.lsf /usr/bin/env bash ~{script}\n");
             }
-            _ => panic!("Expected generic backend"),
+            _ => panic!("expected generic backend"),
         }
     }
 }

@@ -1,14 +1,16 @@
 //! Supported backends.
 
-pub mod docker;
 use async_trait::async_trait;
-pub use docker::Runner;
 use futures::future::BoxFuture;
 use nonempty::NonEmpty;
 use tokio::sync::oneshot::Sender;
 
-pub mod backend_config;
+pub mod config;
+pub mod docker;
 pub mod generic;
+pub mod tes;
+
+pub use config::Config;
 
 pub use std::fmt::Debug;
 
@@ -35,7 +37,7 @@ pub struct ExecutionResult {
 #[derive(Debug)]
 pub struct Reply {
     /// The results from each execution.
-    pub executions: NonEmpty<ExecutionResult>,
+    pub executions: Option<NonEmpty<ExecutionResult>>,
 }
 
 /// An execution backend.

@@ -128,7 +128,7 @@ impl Backend for Runner {
             // client wasn't interested in the response, so we don't care about
             // this error.
             let _ = cb.send(Reply {
-                executions: results.expect("at least one execution to be run"),
+                executions: Some(results.expect("at least one execution to be run")),
             });
         }
         .boxed()
