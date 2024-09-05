@@ -7,9 +7,12 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
+/// The left placeholder for the backend config
 const LEFT_PLACEHOLDER: &str = "${";
+/// The right placeholder for the backend config
 const RIGHT_PLACEHOLDER: &str = "}";
 
+/// Substitutes placeholders in a string with values from a hashmap
 fn substitute_placeholders(s: &str, substitutions: &HashMap<String, String>) -> String {
     let mut result = s.to_string();
     for (key, value) in substitutions {
