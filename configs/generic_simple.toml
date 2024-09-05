@@ -1,0 +1,4 @@
+[[backends]]
+name = "HelloGeneric"
+kind = "Generic"
+command = "echo Hello ${name}"
