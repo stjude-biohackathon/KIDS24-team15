@@ -1,12 +1,12 @@
 [[backends]]
 name = "test"
 kind = "Generic"
-command = "echo ~{name}"
+submit = "echo ~{name}"
 
 [[backends]]
 name = "quux"
 kind = "Generic"
-command = "bsub ~{script}"
+submit = "bsub ~{script}"
 default-cpu = 1
 default-ram = 1
 

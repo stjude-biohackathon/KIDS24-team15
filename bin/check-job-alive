@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+[[ "$#" -ne 1 ]] && >&2 echo "Usage: $(basename "$0") [bjobid]" && exit 1
+ID=$1; shift;
+
+TMP=$(mktemp)
+bjobs $ID &> "$TMP"
+output=$(cat "$TMP")
+rm "$TMP"
+
+if [[ "$?" -ne 0  ]]; then
+  exit $?
+fi
+
+if echo "$output" | grep "is not found" &> /dev/null; then
+  >&2 echo "Job $ID not found"
+  exit 1
+fi
+
+if echo "$output" | grep "DONE" &> /dev/null; then
+  >&2 echo "Job $ID is done"
+  exit 42
+fi
+  
+if ! echo "$output" | grep -E "RUN|PEND" &> /dev/null; then
+  >&2 echo "Job $ID in invalid state"
+  >&2 echo $output
+  exit 1
+fi
+
+# Job is still running
+exit 0

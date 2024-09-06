@@ -433,6 +433,7 @@ dependencies = [
  "paste",
  "rand",
  "random_word",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",

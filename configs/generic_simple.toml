@@ -1,10 +1,10 @@
 [[backends]]
 name = "HelloGeneric"
 kind = "Generic"
-command = "echo Hello ~{name}"
+submit = "echo Hello ~{name}"
 
 [[backends]]
 name = "HelloGenericWithDefaults"
 kind = "Generic"
-command = "echo I have ~{ram} mb of ram"
+submit = "echo I have ~{ram} mb of ram"
 default-ram = 4096

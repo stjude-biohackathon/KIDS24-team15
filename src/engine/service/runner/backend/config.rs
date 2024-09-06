@@ -1,8 +1,9 @@
 //! Configuration for different types of backends
 
 use std::collections::HashMap;
-use std::process::Command;
-use std::process::Output;
+
+#[cfg(test)]
+use std::process::{Command, Output};
 
 use serde::Deserialize;
 use serde::Serialize;
@@ -13,10 +14,11 @@ const LEFT_PLACEHOLDER: &str = "~{";
 const RIGHT_PLACEHOLDER: &str = "}";
 
 /// Substitutes placeholders in a string with values from a hashmap
-fn substitute_placeholders(s: &str, substitutions: &HashMap<String, String>) -> String {
+pub(crate) fn substitute_placeholders(s: &str, substitutions: &HashMap<String, String>) -> String {
     let mut result = s.to_string();
     for (key, value) in substitutions {
         let placeholder_key = format!("{}{}{}", LEFT_PLACEHOLDER, key, RIGHT_PLACEHOLDER);
+        dbg!(&placeholder_key, value);
         result = result.replace(&placeholder_key, value);
     }
     result
@@ -43,7 +45,8 @@ pub struct Config {
 impl Config {
     /// Submits a backend based on its config. Likely this method will be removed and the branch for Generic will be moved to GenericBackend's submit method.
     /// Instead of this method we should have a to_backend() method or something similar that creates a Box<dyn Backend> based on config.
-    pub fn submit(&self, substitutions: &mut HashMap<String, String>) -> Option<Output> {
+    #[cfg(test)]
+    pub fn submit(&self, substitutions: &mut HashMap<String, String>) -> Output {
         // Replace default flags only if it isn't already set
 
         if let Some(cpu) = self.default_cpu {
@@ -60,18 +63,18 @@ impl Config {
 
         match &self.kind {
             BackendType::Generic(generic) => {
-                let command_str = substitute_placeholders(&generic.command, substitutions);
+                let command = substitute_placeholders(&generic.submit, substitutions);
 
-                let output = Command::new("sh")
+                Command::new("sh")
                     .arg("-c")
-                    .arg(command_str)
+                    .arg(command)
                     .output()
-                    .expect("failed to run command");
-                Some(output)
+                    .expect("failed to run command")
             }
-            BackendType::Docker(_docker) => {
-                // Because this method is really only to test the generic backend's submitting, I'm going to leave Docker unimplemented unless otherwise requested
-                None
+            _ => {
+                // SAFETY: this method is only to test the generic backend, so
+                // any other variant should throw unreachable.
+                unreachable!()
             }
         }
     }
@@ -91,7 +94,15 @@ pub enum BackendType {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GenericBackendConfig {
     /// The script command that will be run on submit
-    command: String,
+    pub submit: String,
+    /// The regex that will be used to extract the job id from STDOUT
+    pub job_id_regex: Option<String>,
+    /// The script command that will run on monitor check
+    pub monitor: Option<String>,
+    /// The frequency that the monitor command will run in seconds
+    pub monitor_frequency: Option<u32>,
+    /// The script command that will run on kill
+    pub kill: Option<String>,
 }
 
 /// Extra attributes for Docker backends
@@ -112,9 +123,7 @@ mod tests {
         let mut substitutions = HashMap::new();
         substitutions.insert("name".to_string(), "Kids24".to_string());
 
-        let output = backend
-            .submit(&mut substitutions)
-            .expect("get output from generic backend");
+        let output = backend.submit(&mut substitutions);
         assert_eq!(output.stdout, b"Hello Kids24\n");
     }
 
@@ -125,10 +134,11 @@ mod tests {
         let backend = &config.backends[1];
         let mut substitutions = HashMap::new();
 
-        let output = backend
-            .submit(&mut substitutions)
-            .expect("get output from generic backend");
-        assert_eq!(output.stdout, b"I have 4096 mb of ram\n");
+        let output = backend.submit(&mut substitutions);
+        assert_eq!(
+            &String::from_utf8(output.stdout).unwrap(),
+            "I have 4096 mb of ram\n"
+        );
     }
 
     #[test]
@@ -139,10 +149,11 @@ mod tests {
         let mut substitutions = HashMap::new();
         substitutions.insert("ram".to_string(), 2.to_string());
 
-        let output = backend
-            .submit(&mut substitutions)
-            .expect("get output from generic backend");
-        assert_eq!(output.stdout, b"I have 2 mb of ram\n");
+        let output = backend.submit(&mut substitutions);
+        assert_eq!(
+            &String::from_utf8(output.stdout).unwrap(),
+            "I have 2 mb of ram\n"
+        );
     }
 
     #[test]
@@ -154,9 +165,9 @@ mod tests {
 
         match &backend.kind {
             super::BackendType::Generic(generic) => {
-                let command_str = generic.command.clone();
+                let command_str = generic.submit.clone();
                 let subbed = super::substitute_placeholders(&command_str, &substitutions);
-                assert_eq!(subbed, "    bsub -q compbio -n 1 -g crankshaft -R \"rusage[mem=~{memory}] span[hosts=1]\" -cwd ~{cwd} -o ~{cwd}/execution/stdout.lsf -e ~{cwd}/execution/stderr.lsf /usr/bin/env bash ~{script}\n");
+                assert_eq!(subbed, "    bsub -q compbio -n 1 -cwd ~{cwd} -o ~{cwd}/stdout.lsf -e ~{cwd}/stderr.lsf -R \"rusage[mem=~{memory_mb}] span[hosts=1]\" ~{script}\n");
             }
             _ => panic!("expected generic backend"),
         }

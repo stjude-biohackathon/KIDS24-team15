@@ -1,15 +1,19 @@
 [[Backends]]
 name = "LSF"
 kind = "Generic"
-command = """
+submit = """
     bsub \
         -q ~{lsf_queue} \
         -n ~{cpu} \
-        -g ~{lsf_job_group} \
-        -R "rusage[mem=~{memory}] span[hosts=~{hosts}]" \
         -cwd ~{cwd} \
-        -o ~{cwd}/execution/stdout.lsf \
-        -e ~{cwd}/execution/stderr.lsf \
-        /usr/bin/env bash ~{script}
+        -o ~{cwd}/stdout.lsf \
+        -e ~{cwd}/stderr.lsf \
+        -R "rusage[mem=~{memory_mb}] span[hosts=~{hosts}]" \
+        ~{script}
 """
-runtime_attrs = { lsf_queue = "compbio", cpu = 1, lsf_job_group = "crankshaft", hosts = 1 }
+default-ram = 3000
+runtime_attrs = { lsf_queue = "compbio", hosts = 1, cpu = 1 }
+job_id_regex = "Job <(\\d+)>.*"
+monitor = "check-job-alive ~{job_id}"
+monitor_frequency = 5
+kill = "bkill ~{job_id}"
