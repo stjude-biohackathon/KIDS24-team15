@@ -1,0 +1,5 @@
+{
+    "name": "Sample Task",
+    "command": "echo Hello, json unput!"
+}
+
