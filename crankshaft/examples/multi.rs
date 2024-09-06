@@ -1,4 +1,4 @@
-//! An example for runner a task using the Docker backend service.
+//! An example for runner a task using multiple backend services.
 
 use crankshaft::engine::task::Execution;
 use crankshaft::engine::Engine;
@@ -15,7 +15,7 @@ async fn main() {
         .with(EnvFilter::from_default_env())
         .init();
 
-    let mut engine = Engine::default();
+    let mut engine = Engine::with_default_tes();
 
     let task = Task::builder()
         .name("my-example-task")
@@ -27,7 +27,6 @@ async fn main() {
             .stderr("stderr.txt")
             .try_build()
             .unwrap()])
-        .extend_volumes(vec!["/volA".to_string(), "/volB".to_string()])
         .try_build()
         .unwrap();
 

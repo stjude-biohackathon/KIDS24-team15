@@ -62,32 +62,30 @@ pub struct Builder {
 }
 
 impl Builder {
-    /// Attempts to add a name to the [`Builder`].
-    pub fn name<S: Into<String>>(mut self, name: S) -> Result<Self> {
-        let name = name.into();
-
-        if self.name.is_some() {
-            return Err(Error::Multiple("name"));
-        }
-
-        self.name = Some(name);
-        Ok(self)
+    /// Adds a name to the [`Builder`].
+    ///
+    /// # Notes
+    ///
+    /// This will silently overwrite any previous name declarations provided to
+    /// the builder.
+    pub fn name<S: Into<String>>(mut self, name: S) -> Self {
+        self.name = Some(name.into());
+        self
     }
 
-    /// Attempts to add a description to the [`Builder`].
-    pub fn description<S: Into<String>>(mut self, description: S) -> Result<Self> {
-        let description = description.into();
-
-        if self.description.is_some() {
-            return Err(Error::Multiple("description"));
-        }
-
-        self.description = Some(description);
-        Ok(self)
+    /// Adds a description to the [`Builder`].
+    ///
+    /// # Notes
+    ///
+    /// This will silently overwrite any previous description declarations
+    /// provided to the builder.
+    pub fn description<S: Into<String>>(mut self, description: S) -> Self {
+        self.description = Some(description.into());
+        self
     }
 
-    /// Attempts to extend inputs within the [`Builder`].
-    pub fn extend_inputs<Iter>(mut self, inputs: Iter) -> Result<Self>
+    /// Extends the set of inputs within the [`Builder`].
+    pub fn extend_inputs<Iter>(mut self, inputs: Iter) -> Self
     where
         Iter: IntoIterator<Item = Input>,
     {
@@ -109,11 +107,11 @@ impl Builder {
             }
         };
 
-        Ok(self)
+        self
     }
 
-    /// Attempts to extend outputs within the [`Builder`].
-    pub fn extend_outputs<Iter>(mut self, outputs: Iter) -> Result<Self>
+    /// Extends the set of outputs within the [`Builder`].
+    pub fn extend_outputs<Iter>(mut self, outputs: Iter) -> Self
     where
         Iter: IntoIterator<Item = Output>,
     {
@@ -135,21 +133,22 @@ impl Builder {
             }
         };
 
-        Ok(self)
+        self
     }
 
-    /// Attempts to add a resources to the [`Builder`].
-    pub fn resources(mut self, resources: Resources) -> Result<Self> {
-        if self.resources.is_some() {
-            return Err(Error::Multiple("resources"));
-        }
-
-        self.resources = Some(resources);
-        Ok(self)
+    /// Adds a set of requested resources to the [`Builder`].
+    ///
+    /// # Notes
+    ///
+    /// This will silently overwrite any previous description declarations
+    /// provided to the builder.
+    pub fn resources<R: Into<Resources>>(mut self, resources: R) -> Self {
+        self.resources = Some(resources.into());
+        self
     }
 
-    /// Attempts to extend executors within the [`Builder`].
-    pub fn extend_executors<Iter>(mut self, executors: Iter) -> Result<Self>
+    /// Extends the set of executions within the [`Builder`].
+    pub fn extend_executions<Iter>(mut self, executors: Iter) -> Self
     where
         Iter: IntoIterator<Item = Execution>,
     {
@@ -171,11 +170,11 @@ impl Builder {
             }
         };
 
-        Ok(self)
+        self
     }
 
-    /// Attempts to extend volumes within the [`Builder`].
-    pub fn extend_volumes<Iter>(mut self, volumes: Iter) -> Result<Self>
+    /// Extends the set of volumes within the [`Builder`].
+    pub fn extend_volumes<Iter>(mut self, volumes: Iter) -> Self
     where
         Iter: IntoIterator<Item = String>,
     {
@@ -197,7 +196,7 @@ impl Builder {
             }
         };
 
-        Ok(self)
+        self
     }
 
     /// Consumes `self` and attempts to return a built [`Task`].

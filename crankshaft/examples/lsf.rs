@@ -32,10 +32,8 @@ async fn main() {
 
     let task = Task::builder()
         .name("my-example-task")
-        .unwrap()
         .description("a longer description")
-        .unwrap()
-        .extend_executors(vec![Execution::builder()
+        .extend_executions(vec![Execution::builder()
             .working_directory(".")
             .image("ubuntu")
             .args(&[String::from("echo"), String::from("'hello, world!'")])
@@ -43,7 +41,6 @@ async fn main() {
             .stderr("stderr.txt")
             .try_build()
             .unwrap()])
-        .unwrap()
         .try_build()
         .unwrap();
 

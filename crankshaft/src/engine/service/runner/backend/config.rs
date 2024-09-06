@@ -18,7 +18,6 @@ pub(crate) fn substitute_placeholders(s: &str, substitutions: &HashMap<String, S
     let mut result = s.to_string();
     for (key, value) in substitutions {
         let placeholder_key = format!("{}{}{}", LEFT_PLACEHOLDER, key, RIGHT_PLACEHOLDER);
-        dbg!(&placeholder_key, value);
         result = result.replace(&placeholder_key, value);
     }
     result

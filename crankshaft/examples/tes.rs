@@ -16,21 +16,17 @@ async fn main() {
         .init();
 
     let mut engine = Engine::with_default_tes();
-    dbg!(&engine);
 
     let task = Task::builder()
         .name("my-example-task")
-        .unwrap()
         .description("a longer description")
-        .unwrap()
-        .extend_executors(vec![Execution::builder()
+        .extend_executions(vec![Execution::builder()
             .image("ubuntu")
             .args(&[String::from("echo"), String::from("'hello, world!'")])
             .stdout("stdout.txt")
             .stderr("stderr.txt")
             .try_build()
             .unwrap()])
-        .unwrap()
         .try_build()
         .unwrap();
 
