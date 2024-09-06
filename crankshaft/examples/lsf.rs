@@ -35,7 +35,7 @@ async fn main() {
         .extend_executions(vec![Execution::builder()
             .working_directory(".")
             .image("ubuntu")
-            .args(&[String::from("echo"), String::from("'hello, world!'")])
+            .args(&[String::from("sleep"), String::from("20")])
             .stdout("stdout.txt")
             .stderr("stderr.txt")
             .try_build()
@@ -43,7 +43,7 @@ async fn main() {
         .try_build()
         .unwrap();
 
-    let receivers = (0..20000)
+    let receivers = (0..1000)
         .map(|_| engine.submit("generic", task.clone()).callback)
         .collect::<Vec<_>>();
 
