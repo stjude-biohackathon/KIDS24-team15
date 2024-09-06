@@ -2,6 +2,7 @@
 name = "LSF"
 kind = "Generic"
 submit = """
+    ssh hpc \
     bsub \
         -q ~{lsf_queue} \
         -n ~{cpu} \
@@ -14,6 +15,6 @@ submit = """
 default-ram = 3000
 runtime_attrs = { lsf_queue = "compbio", hosts = 1, cpu = 1 }
 job_id_regex = "Job <(\\d+)>.*"
-monitor = "check-job-alive ~{job_id}"
+monitor = "ssh hpc '~/bin/check-job-alive ~{job_id}'"
 monitor_frequency = 5
 kill = "bkill ~{job_id}"

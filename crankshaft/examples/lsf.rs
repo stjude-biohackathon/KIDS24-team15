@@ -43,7 +43,7 @@ async fn main() {
         .try_build()
         .unwrap();
 
-    let receivers = (0..1000)
+    let receivers = (0..2)
         .map(|_| engine.submit("generic", task.clone()).callback)
         .collect::<Vec<_>>();
 
