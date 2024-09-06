@@ -50,5 +50,5 @@ pub struct Log {
     pub stderr: Option<String>,
 
     /// The exit code.
-    pub exit_code: u32,
+    pub exit_code: Option<u32>,
 }

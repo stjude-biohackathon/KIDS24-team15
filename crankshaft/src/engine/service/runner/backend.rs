@@ -24,7 +24,7 @@ pub type Result<T> = std::result::Result<T, BoxedError>;
 #[derive(Debug)]
 pub struct ExecutionResult {
     /// The exit code.
-    pub status: i64,
+    pub status: u64,
 
     /// The contents of standard out.
     pub stdout: String,
@@ -36,6 +36,9 @@ pub struct ExecutionResult {
 /// A reply from a backend when a task is completed.
 #[derive(Debug)]
 pub struct Reply {
+    /// The name of the backend that ran this.
+    pub backend: String,
+
     /// The results from each execution.
     pub executions: Option<NonEmpty<ExecutionResult>>,
 }
@@ -43,6 +46,9 @@ pub struct Reply {
 /// An execution backend.
 #[async_trait]
 pub trait Backend: Debug + Send + 'static {
+    /// Gets the default name for the backend.
+    fn default_name(&self) -> &'static str;
+
     /// Runs a task in a backend;
-    fn run(&self, task: Task, cb: Sender<Reply>) -> BoxFuture<'static, ()>;
+    fn run(&self, name: String, task: Task, cb: Sender<Reply>) -> BoxFuture<'static, ()>;
 }

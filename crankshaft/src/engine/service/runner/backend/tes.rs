@@ -6,11 +6,13 @@ use std::time::Duration;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
 use futures::FutureExt as _;
+use nonempty::NonEmpty;
 use reqwest::header;
 use tes::Client;
 use tokio::sync::oneshot::Sender;
 
 use crate::engine::service::runner::backend::Backend;
+use crate::engine::service::runner::backend::ExecutionResult;
 use crate::engine::service::runner::backend::Reply;
 use crate::engine::Task;
 use crate::BoxedError;
@@ -26,51 +28,53 @@ pub type Result<T> = std::result::Result<T, BoxedError>;
 
 /// A local execution backend.
 #[derive(Debug)]
-pub struct Tes {
+pub struct TesBackend {
     /// A handle to the inner TES client.
     client: Arc<Client>,
 }
 
-impl Tes {
-    /// Attempts to create a new [`Tes`].
-    ///
-    /// Note that, currently, we connect [using defaults](Docker::connect_with_defaults).
-    pub fn try_new(url: impl Into<String>) -> Result<Self> {
+impl TesBackend {
+    /// Creates a new [`TesBackend`].
+    pub fn new(url: impl Into<String>, token: Option<impl Into<String>>) -> Self {
         let url = url.into();
 
         let mut headers = header::HeaderMap::new();
-        headers.insert(
-            "X-Pinggy-No-Screen",
-            header::HeaderValue::from_static("value"),
-        );
+
+        if let Some(token) = token {
+            headers.insert(
+                "Authorization",
+                header::HeaderValue::from_str(&format!("Basic {}", token.into())).unwrap(),
+            );
+        }
 
         let inner = Client::new(&url, headers).unwrap();
 
-        Ok(Self {
+        Self {
             client: Arc::new(inner),
-        })
-    }
-}
-
-impl Default for Tes {
-    fn default() -> Self {
-        Self::try_new("http://localhost:8080/ga4gh/tes/v1/").unwrap()
+        }
     }
 }
 
 #[async_trait]
-impl Backend for Tes {
-    fn run(&self, _: Task, cb: Sender<Reply>) -> BoxFuture<'static, ()> {
+impl Backend for TesBackend {
+    fn default_name(&self) -> &'static str {
+        unimplemented!("you must provide a backend name for a TES runner!")
+    }
+
+    fn run(&self, name: String, task: Task, cb: Sender<Reply>) -> BoxFuture<'static, ()> {
         let client = self.client.clone();
 
         let task = tes::Task {
-            name: Some("Hello World".to_string()),
-            description: Some("Hello World, inspired by Funnel's most basic example".to_string()),
-            executors: vec![tes::task::Executor {
-                image: "alpine".to_string(),
-                command: vec!["echo".to_string(), "TESK says: Hello World".to_string()],
-                ..Default::default()
-            }],
+            name: task.name().map(|v| v.to_owned()),
+            description: task.description().map(|v| v.to_owned()),
+            executors: task
+                .executions()
+                .map(|execution| tes::task::Executor {
+                    image: execution.image().to_owned(),
+                    command: execution.args().into_iter().cloned().collect::<Vec<_>>(),
+                    ..Default::default()
+                })
+                .collect::<Vec<_>>(),
             ..Default::default()
         };
 
@@ -78,20 +82,36 @@ impl Backend for Tes {
             let task_id = client.create_task(task).await.unwrap();
 
             loop {
-                if let Ok(result) = client.get_task(&task_id).await {
-                    if let Some(ref state) = result.state {
+                if let Ok(task) = client.get_task(&task_id).await {
+                    if let Some(ref state) = task.state {
                         if !state.is_executing() {
-                            break;
+                            let mut results = task
+                                .logs
+                                .unwrap()
+                                .into_iter()
+                                .flat_map(|task| task.logs)
+                                .map(|log| ExecutionResult {
+                                    status: log.exit_code.unwrap_or_default() as u64,
+                                    stdout: log.stdout.unwrap_or_default(),
+                                    stderr: log.stderr.unwrap_or_default(),
+                                });
+
+                            let mut executions = NonEmpty::new(results.next().unwrap());
+                            executions.extend(results);
+
+                            let reply = Reply {
+                                backend: name,
+                                executions: Some(executions),
+                            };
+
+                            let _ = cb.send(reply);
+                            return;
                         }
 
                         tokio::time::sleep(Duration::from_millis(200)).await;
                     }
                 }
             }
-
-            let reply = Reply { executions: None };
-
-            let _ = cb.send(reply);
         }
         .boxed()
     }

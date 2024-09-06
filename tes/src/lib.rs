@@ -2,8 +2,9 @@
 
 use reqwest::header;
 use reqwest::header::HeaderMap;
-use reqwest::Error;
 use reqwest::StatusCode;
+use reqwest_middleware::ClientWithMiddleware;
+use reqwest_middleware::Error;
 
 pub mod responses;
 pub mod task;
@@ -20,7 +21,7 @@ pub struct Client {
     url: String,
 
     /// The client.
-    client: reqwest::Client,
+    client: ClientWithMiddleware,
 }
 
 impl Client {
@@ -29,9 +30,17 @@ impl Client {
         let url = url.into();
         let headers = headers.into();
 
-        let client = reqwest::Client::builder()
+        let client = reqwest::ClientBuilder::new()
             .default_headers(headers)
             .build()?;
+
+        let retry_policy =
+            reqwest_retry::policies::ExponentialBackoff::builder().build_with_max_retries(3);
+        let client = reqwest_middleware::ClientBuilder::new(client)
+            .with(reqwest_retry::RetryTransientMiddleware::new_with_policy(
+                retry_policy,
+            ))
+            .build();
 
         Ok(Self { url, client })
     }
@@ -70,6 +79,7 @@ impl Client {
             .await?;
 
         let text = &res.text().await?;
+
         Ok(serde_json::from_str::<responses::CreateTask>(text)
             .unwrap()
             .id)
@@ -79,7 +89,9 @@ impl Client {
     pub async fn get_task(&self, id: &str) -> Result<Task> {
         let url = format!("{}tasks/{}?view=FULL", self.url, id);
         let res = self.client.get(&url).send().await?;
-        let task: Task = serde_json::from_str(&res.text().await?).unwrap();
+        let text = &res.text().await?;
+        let task: Task = serde_json::from_str(text).unwrap();
+
         Ok(task)
     }
 }

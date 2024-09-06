@@ -8,15 +8,15 @@ use nonempty::NonEmpty;
 use regex;
 use tokio::sync::oneshot::Sender;
 
-use crate::engine::service::runner::backend;
 use crate::engine::service::runner::backend::config::substitute_placeholders;
 use crate::engine::service::runner::backend::config::BackendType;
 use crate::engine::service::runner::backend::Backend;
+use crate::engine::service::runner::backend::Config;
 use crate::engine::service::runner::backend::ExecutionResult;
 use crate::engine::service::runner::backend::Reply;
 use crate::engine::Task;
 
-/// A generic backend
+/// A generic backend.
 #[derive(Debug)]
 pub struct GenericBackend {
     /// All runtime attributes
@@ -41,25 +41,6 @@ pub struct GenericBackend {
 }
 
 impl GenericBackend {
-    /// Generates a generic backend from its designated configuration
-    pub fn from_config(conf: backend::Config) -> Option<Self> {
-        // If BackendConfig is not of type generic, return None(Or Err)
-        if let BackendType::Generic(generic_backend) = conf.kind {
-            Some(Self {
-                runtime_attributes: conf.runtime_attrs,
-                default_cpu: conf.default_cpu,
-                default_ram_mb: conf.default_ram,
-                submit: generic_backend.submit,
-                job_id_regex: generic_backend.job_id_regex,
-                monitor: generic_backend.monitor,
-                monitor_frequency: generic_backend.monitor_frequency,
-                kill: generic_backend.kill,
-            })
-        } else {
-            None
-        }
-    }
-
     /// Generates a process result from an incoming task
     pub async fn process_command(
         &self,
@@ -120,33 +101,49 @@ impl GenericBackend {
         // TODO: collect job output. In meantime, just return the status code
         // and the stdout/stderr of the submit command
         Some(ExecutionResult {
-            status: submit_output.status.code()? as i64,
+            status: submit_output.status.code()? as u64,
             stdout: submit_stdout,
             stderr: String::from_utf8(submit_output.stderr).ok()?,
         })
     }
 
     /// Wraps the GenericBackend in an Arc and returns the GenericRunner from it
-    pub fn to_runner(self) -> GenericRunner {
-        GenericRunner {
+    pub fn to_runner(self) -> Runner {
+        Runner {
             client: Arc::new(self),
         }
     }
+}
 
-    /// Generates a generic backend from a config file path
-    pub fn from_config_file() {
-        todo!()
+impl TryFrom<Config> for GenericBackend {
+    type Error = ();
+
+    fn try_from(value: Config) -> Result<Self, Self::Error> {
+        if let BackendType::Generic(generic_backend) = value.kind {
+            Ok(Self {
+                runtime_attributes: value.runtime_attrs,
+                default_cpu: value.default_cpu,
+                default_ram_mb: value.default_ram,
+                submit: generic_backend.submit,
+                job_id_regex: generic_backend.job_id_regex,
+                monitor: generic_backend.monitor,
+                monitor_frequency: generic_backend.monitor_frequency,
+                kill: generic_backend.kill,
+            })
+        } else {
+            Err(())
+        }
     }
 }
 
 /// A generic backend runner
 #[derive(Debug)]
-pub struct GenericRunner {
-    /// An Arc to the underlying Backend
+pub struct Runner {
+    /// The underlying backend.
     client: Arc<GenericBackend>,
 }
 
-impl GenericRunner {
+impl Runner {
     /// Creates a new GenericRunner from a GenericBackend
     pub fn new(client: GenericBackend) -> Self {
         Self {
@@ -156,8 +153,17 @@ impl GenericRunner {
 }
 
 #[async_trait]
-impl Backend for GenericRunner {
-    fn run(&self, task: Task, cb: Sender<super::Reply>) -> futures::future::BoxFuture<'static, ()> {
+impl Backend for Runner {
+    fn default_name(&self) -> &'static str {
+        unimplemented!("you must provide a backend name for a generic runner!")
+    }
+
+    fn run(
+        &self,
+        name: String,
+        task: Task,
+        cb: Sender<super::Reply>,
+    ) -> futures::future::BoxFuture<'static, ()> {
         let client = self.client.clone();
 
         async move {
@@ -202,6 +208,7 @@ impl Backend for GenericRunner {
             }
 
             let _ = cb.send(Reply {
+                backend: name,
                 executions: Some(results.expect("at least one execution to be run")),
             });
         }

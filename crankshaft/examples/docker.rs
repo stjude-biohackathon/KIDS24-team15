@@ -1,11 +1,13 @@
 //! An example for runner a task using the Docker backend service.
+use std::io::Write;
+
 use crankshaft::engine::task::input;
 use crankshaft::engine::task::Execution;
 use crankshaft::engine::task::Input;
 use crankshaft::engine::Engine;
 use crankshaft::engine::Task;
-use std::io::Write;
 use tempfile::NamedTempFile;
+use tracing::info;
 use tracing_subscriber::fmt;
 use tracing_subscriber::layer::SubscriberExt as _;
 use tracing_subscriber::util::SubscriberInitExt as _;
@@ -57,12 +59,12 @@ async fn main() {
         .unwrap();
 
     let receivers = (0..10)
-        .map(|_| engine.submit(task.clone()).callback)
+        .map(|_| engine.submit("docker", task.clone()).callback)
         .collect::<Vec<_>>();
 
     engine.run().await;
 
     for rx in receivers {
-        println!("Reply: {:?}", rx.await.unwrap());
+        info!(runner = "Docker", reply = ?rx.await.unwrap());
     }
 }

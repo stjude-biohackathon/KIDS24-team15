@@ -149,7 +149,7 @@ pub struct TaskLog {
     pub end_time: Option<DateTime<Utc>>,
 
     /// The output file logs.
-    pub outputs: Vec<OutputFileLog>,
+    pub outputs: Option<Vec<OutputFileLog>>,
 
     /// The system logs.
     pub system_logs: Option<String>,
@@ -187,4 +187,7 @@ pub struct Task {
 
     /// The tags.
     pub tags: Option<HashMap<String, String>>,
+
+    /// The logs.
+    pub logs: Option<Vec<TaskLog>>,
 }

@@ -4,37 +4,39 @@ members = ["crankshaft", "tes", "wdl-runtime"]
 
 [workspace.dependencies]
 anyhow = "1.0.86"
-id-arena = "2.2.1"
-indexmap = "2.5.0"
-ordered-float = "4.2.2"
-paste = "1.0.15"
-petgraph = "0.6.5"
-indicatif = "0.17.8"
-string-interner = "0.17.0"
-wdl-analysis = { git = "https://github.com/peterhuene/wdl", branch = "hackathon" }
-wdl-ast = { git = "https://github.com/peterhuene/wdl", branch = "hackathon" }
-wdl-grammar = { git = "https://github.com/peterhuene/wdl", branch = "hackathon" }
 async-trait = "0.1.82"
 bollard = "0.17.1"
 bytes = "1.7.1"
+chrono = { version = "0.4.38", features = ["serde"] }
 clap = { version = "4.5.16", features = ["derive"] }
 config = "0.14.0"
 dirs = "5.0.1"
 futures = "0.3.30"
+id-arena = "2.2.1"
+indexmap = "2.5.0"
+indicatif = "0.17.8"
 nonempty = "0.10.0"
+ordered-float = "4.2.2"
+paste = "1.0.15"
+petgraph = "0.6.5"
 rand = "0.8.5"
 random_word = { version = "0.4.3", features = ["en"] }
 regex = "1.10.6"
 reqwest = "0.12.7"
+reqwest-middleware = "0.3.3"
+reqwest-retry = "0.6.1"
 serde = { version = "1.0.209", features = ["derive"] }
 serde_json = "1.0.128"
+serde_yaml = "0.8"                                                                 # Optional, if you want YAML support
+string-interner = "0.17.0"
 tar = "0.4.41"
 tempfile = "3.12.0"
 tes = { path = "../tes", version = "0.1.0" }
-serde_yaml = "0.8"                                                                 # Optional, if you want YAML support
 tokio = { version = "1.40.0", features = ["full", "time"] }
 toml = "0.8.19"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 url = "2.5.2"
-chrono = { version = "0.4.38", features = ["serde"] }
+wdl-analysis = { git = "https://github.com/peterhuene/wdl", branch = "hackathon" }
+wdl-ast = { git = "https://github.com/peterhuene/wdl", branch = "hackathon" }
+wdl-grammar = { git = "https://github.com/peterhuene/wdl", branch = "hackathon" }

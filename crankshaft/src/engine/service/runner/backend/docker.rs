@@ -8,7 +8,6 @@ use async_trait::async_trait;
 use bollard::container::Config;
 use bollard::container::CreateContainerOptions;
 use bollard::container::LogOutput;
-use bollard::container::RemoveContainerOptions;
 use bollard::container::StartContainerOptions;
 use bollard::container::UploadToContainerOptions;
 use bollard::errors::Error;
@@ -49,25 +48,36 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 /// A local execution backend.
 #[derive(Debug)]
-pub struct Runner {
+pub struct DockerBackend {
     /// A handle to the inner docker client.
     client: Arc<Docker>,
+
+    /// Whether or not to clean up containers.
+    cleanup: bool,
 }
 
-impl Runner {
+impl DockerBackend {
     /// Attempts to create a new [`Docker`].
     ///
     /// Note that, currently, we connect [using defaults](Docker::connect_with_defaults).
-    pub fn try_new() -> Result<Self> {
+    pub fn try_new(cleanup: bool) -> Result<Self> {
         let inner = Docker::connect_with_defaults().map(Arc::new)?;
-        Ok(Self { client: inner })
+        Ok(Self {
+            client: inner,
+            cleanup,
+        })
     }
 }
 
 #[async_trait]
-impl Backend for Runner {
-    fn run(&self, task: Task, cb: Sender<Reply>) -> BoxFuture<'static, ()> {
+impl Backend for DockerBackend {
+    fn default_name(&self) -> &'static str {
+        "docker"
+    }
+
+    fn run(&self, name: String, task: Task, cb: Sender<Reply>) -> BoxFuture<'static, ()> {
         let mut client = self.client.clone();
+        let cleanup = self.cleanup;
 
         async move {
             let mut results: Option<NonEmpty<ExecutionResult>> = None;
@@ -102,19 +112,9 @@ impl Backend for Runner {
                 // Run a command
                 let exec_result = container_exec(&name, execution, &mut client).await;
 
-                // Export outputs
-
-                // remove the container
-                client
-                    .remove_container(
-                        &name,
-                        Some(RemoveContainerOptions {
-                            force: true,
-                            ..Default::default()
-                        }),
-                    )
-                    .await
-                    .unwrap();
+                if cleanup {
+                    client.remove_container(&name, None).await.unwrap();
+                }
 
                 results = match results {
                     Some(mut results) => {
@@ -130,6 +130,7 @@ impl Backend for Runner {
             // client wasn't interested in the response, so we don't care about
             // this error.
             let _ = cb.send(Reply {
+                backend: name,
                 executions: Some(results.expect("at least one execution to be run")),
             });
         }
@@ -272,7 +273,7 @@ async fn container_exec(
     // Get return code
     // Get the exit code
     let exec_inspect = client.inspect_exec(&exec_id).await.unwrap();
-    let status = exec_inspect.exit_code.unwrap_or(-1);
+    let status = exec_inspect.exit_code.unwrap_or(-1) as u64;
 
     ExecutionResult {
         status,
