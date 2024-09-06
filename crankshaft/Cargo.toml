@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 indicatif = { workspace = true }
 tes = { path = "../tes", version = "0.1.0" }
+wdl-runtime = { path = "../wdl-runtime", version = "0.1.0" }
 async-trait = { workspace = true }
 bollard = { workspace = true }
 bytes = { workspace = true }
@@ -34,6 +35,8 @@ wdl-ast = { workspace = true }
 wdl-analysis = { workspace = true }
 anyhow = { workspace = true }
 tar.workspace = true
+codespan-reporting = { workspace = true }
+colored = { workspace = true }
 
 [lints.rust]
 missing_docs = "warn"

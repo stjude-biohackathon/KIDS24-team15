@@ -38,5 +38,7 @@ tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 url = "2.5.2"
 wdl-analysis = { git = "https://github.com/peterhuene/wdl", branch = "hackathon" }
-wdl-ast = { git = "https://github.com/peterhuene/wdl", branch = "hackathon" }
-wdl-grammar = { git = "https://github.com/peterhuene/wdl", branch = "hackathon" }
+wdl-ast = { git = "https://github.com/peterhuene/wdl", branch = "hackathon", features = ["codespan"] }
+wdl-grammar = { git = "https://github.com/peterhuene/wdl", branch = "hackathon", features = ["codespan"] }
+codespan-reporting = "0.11.1"
+colored = "2.1.0"

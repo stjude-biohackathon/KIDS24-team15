@@ -1,6 +1,7 @@
 //! Implementation of the WDL runtime and values.
 
 use std::collections::HashMap;
+use std::fmt;
 
 use id_arena::{Arena, Id};
 use ordered_float::OrderedFloat;
@@ -151,6 +152,37 @@ impl Value {
                 }
             }
             _ => todo!("implement the remainder coercions"),
+        }
+    }
+
+    /// Used to display the value.
+    pub fn display<'a>(&'a self, runtime: &'a Runtime<'_>) -> impl fmt::Display + 'a {
+        /// Helper type for implementing display.
+        struct Display<'a> {
+            /// A reference to the runtime.
+            runtime: &'a Runtime<'a>,
+            /// The value to display.
+            value: Value,
+        }
+
+        impl fmt::Display for Display<'_> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                match self.value {
+                    Value::Boolean(v) => write!(f, "{v}"),
+                    Value::Integer(v) => write!(f, "{v}"),
+                    Value::Float(v) => write!(f, "{v}"),
+                    Value::String(sym) | Value::File(sym) | Value::Directory(sym) => {
+                        write!(f, "{v}", v = self.runtime.resolve_str(sym))
+                    }
+                    Value::None => write!(f, "None"),
+                    Value::Stored(_, _) => todo!("implement display of compound types"),
+                }
+            }
+        }
+
+        Display {
+            runtime,
+            value: *self,
         }
     }
 }
@@ -307,5 +339,10 @@ impl<'a> Runtime<'a> {
     /// Resolves a previously interned string from a symbol.
     pub fn resolve_str(&self, sym: SymbolU32) -> &str {
         self.interner.resolve(sym).expect("should have symbol")
+    }
+
+    /// Imports a type from the document types collection.
+    pub(crate) fn import_type(&mut self, ty: Type) -> Type {
+        self.types.import(self.document.types(), ty)
     }
 }
