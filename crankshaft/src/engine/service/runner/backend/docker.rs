@@ -20,6 +20,7 @@ use futures::FutureExt;
 use futures::TryStreamExt;
 use nonempty::NonEmpty;
 use random_word::Lang;
+use tempfile::TempDir;
 use tmp_mount::TmpMount;
 use tokio::sync::oneshot::Sender;
 
@@ -82,9 +83,20 @@ impl Backend for Runner {
             for execution in task.executions() {
                 let name = random_name();
 
+                // Create a temporary working directory
+                let temp_dir = TempDir::new().unwrap();
+                let temp_path = temp_dir.path().to_str().unwrap();
+
                 // Create the container
-                container_create(&name, execution, task.resources(), &mut client, &mounts[..])
-                    .await;
+                container_create(
+                    &name,
+                    execution,
+                    task.resources(),
+                    &mut client,
+                    temp_path,
+                    &mounts[..],
+                )
+                .await;
 
                 // Start the container
                 container_start(&name, &mut client).await;
@@ -141,10 +153,13 @@ async fn container_create(
     execution: &Execution,
     resources: Option<&Resources>,
     client: &mut Arc<Docker>,
+    temp_workdir: &str,
     mounts: &[Mount],
 ) {
     // Configure Docker to use all mounts
+    let container_workdir: &str = execution.workdir().map(String::as_str).unwrap_or(WORKDIR);
     let host_config = HostConfig {
+        binds: Some(vec![format!("{}:{}", temp_workdir, container_workdir)]),
         mounts: Some(mounts.to_vec()),
         ..resources.map(HostConfig::from).unwrap_or_default()
     };
@@ -158,7 +173,7 @@ async fn container_create(
         image: Some(execution.image()),
         tty: Some(true),
         host_config: Some(host_config),
-        working_dir: execution.workdir().map(|s| s.as_str()),
+        working_dir: execution.workdir().map(String::as_str).or(Some(WORKDIR)),
         ..Default::default()
     };
 
