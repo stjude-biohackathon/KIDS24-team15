@@ -46,10 +46,7 @@ async fn main() {
         .unwrap();
 
     let receivers = (0..1000)
-        .map(|i| {
-            println!("Submitting task number: {}", i + 1);
-            engine.submit(task.clone()).callback
-        })
+        .map(|_| engine.submit(task.clone()).callback)
         .collect::<Vec<_>>();
 
     engine.run().await;
