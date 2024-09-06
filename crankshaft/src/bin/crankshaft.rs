@@ -5,9 +5,12 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::process::Command as ProcessCommand;
 
+/// A simple task representation for JSON/YAML serialization.
 #[derive(Debug, Deserialize, Serialize)]
 struct Task {
+    /// The name of the task.
     name: String,
+    /// The command to run.
     command: String,
 }
 

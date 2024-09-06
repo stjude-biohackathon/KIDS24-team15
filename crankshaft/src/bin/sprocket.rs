@@ -2,15 +2,8 @@
 
 use anyhow::Result;
 use clap::{Arg, Command};
-use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use wdl_analysis::Analyzer;
-
-#[derive(Debug, Deserialize, Serialize)]
-struct Task {
-    name: String,
-    command: String,
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -35,6 +28,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+/// Analyzes the given WDL document.
 async fn analyze_wdl(wdl_path: PathBuf) -> Result<()> {
     let analyzer = Analyzer::new(|_: (), _, _, _| async {});
     analyzer.add_documents(vec![wdl_path]).await?;
