@@ -15,7 +15,7 @@ async fn main() {
         .with(EnvFilter::from_default_env())
         .init();
 
-    let config = crankshaft::engine::config::Config::new("configs/lsf.toml")
+    let config = crankshaft::engine::config::Config::new("crankshaft/test/fixtures/config/lsf.toml")
         .expect("Load from example config")
         .backends[0]
         .clone();
