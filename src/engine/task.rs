@@ -35,6 +35,9 @@ pub struct Task {
 
     /// The list of [`Execution`]s.
     executions: NonEmpty<Execution>,
+
+    /// The list of volumes shared across executions in the task
+    volumes: Option<NonEmpty<String>>,
 }
 
 impl Task {
@@ -71,5 +74,10 @@ impl Task {
     /// Gets the executions for this task.
     pub fn executions(&self) -> impl Iterator<Item = &Execution> {
         self.executions.iter()
+    }
+
+    /// Gets the volumes for this task.
+    pub fn volumes(&self) -> Option<impl Iterator<Item = &String>> {
+        self.volumes.as_ref().map(|volumes| volumes.iter())
     }
 }

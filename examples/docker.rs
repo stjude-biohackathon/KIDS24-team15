@@ -30,6 +30,8 @@ async fn main() {
             .try_build()
             .unwrap()])
         .unwrap()
+        .extend_volumes(vec!["/volA".to_string(), "/volB".to_string()])
+        .unwrap()
         .try_build()
         .unwrap();
 
