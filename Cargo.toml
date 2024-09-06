@@ -14,10 +14,13 @@ rand = "0.8.5"
 random_word = { version = "0.4.3", features = ["en"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-serde_yaml = "0.8"  # Optional, if you want YAML support
+serde_yaml = "0.8"  
 tokio = { version = "1.40.0", features = ["full", "time"] }
 url = "2.5.2"
-
+wdl-grammar = "0.7.0"   
+wdl-ast = "0.6.0"       
+wdl-analysis = "0.2.0" 
+  
 [lints.rust]
 broken_intra_doc_links = "warn"
 missing_docs = "warn"
