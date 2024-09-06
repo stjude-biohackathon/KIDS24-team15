@@ -1,5 +1,6 @@
 //! A docker runner service.
 
+use std::io::Cursor;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -9,6 +10,7 @@ use bollard::container::CreateContainerOptions;
 use bollard::container::LogOutput;
 use bollard::container::RemoveContainerOptions;
 use bollard::container::StartContainerOptions;
+use bollard::container::UploadToContainerOptions;
 use bollard::errors::Error;
 use bollard::exec::CreateExecOptions;
 use bollard::exec::StartExecResults;
@@ -20,7 +22,6 @@ use futures::FutureExt;
 use futures::TryStreamExt;
 use nonempty::NonEmpty;
 use random_word::Lang;
-use tempfile::TempDir;
 use tmp_mount::TmpMount;
 use tokio::sync::oneshot::Sender;
 
@@ -28,6 +29,7 @@ use crate::engine::service::runner::backend::Backend;
 use crate::engine::service::runner::backend::ExecutionResult;
 use crate::engine::service::runner::backend::Reply;
 use crate::engine::task::Execution;
+use crate::engine::task::Input;
 use crate::engine::task::Resources;
 use crate::engine::Task;
 
@@ -83,23 +85,19 @@ impl Backend for Runner {
             for execution in task.executions() {
                 let name = random_name();
 
-                // Create a temporary working directory
-                let temp_dir = TempDir::new().unwrap();
-                let temp_path = temp_dir.path().to_str().unwrap();
-
                 // Create the container
-                container_create(
-                    &name,
-                    execution,
-                    task.resources(),
-                    &mut client,
-                    temp_path,
-                    &mounts[..],
-                )
-                .await;
+                container_create(&name, execution, task.resources(), &mut client, &mounts[..])
+                    .await;
 
                 // Start the container
                 container_start(&name, &mut client).await;
+
+                // Insert inputs
+                if let Some(inputs) = task.inputs() {
+                    for input in inputs {
+                        insert_input(&name, &mut client, input).await;
+                    }
+                };
 
                 // Run a command
                 let exec_result = container_exec(&name, execution, &mut client).await;
@@ -153,13 +151,10 @@ async fn container_create(
     execution: &Execution,
     resources: Option<&Resources>,
     client: &mut Arc<Docker>,
-    temp_workdir: &str,
     mounts: &[Mount],
 ) {
     // Configure Docker to use all mounts
-    let container_workdir: &str = execution.workdir().map(String::as_str).unwrap_or(WORKDIR);
     let host_config = HostConfig {
-        binds: Some(vec![format!("{}:{}", temp_workdir, container_workdir)]),
         mounts: Some(mounts.to_vec()),
         ..resources.map(HostConfig::from).unwrap_or_default()
     };
@@ -173,7 +168,7 @@ async fn container_create(
         image: Some(execution.image()),
         tty: Some(true),
         host_config: Some(host_config),
-        working_dir: execution.workdir().map(String::as_str).or(Some(WORKDIR)),
+        working_dir: execution.workdir().map(String::as_str),
         ..Default::default()
     };
 
@@ -184,6 +179,41 @@ async fn container_create(
 async fn container_start(name: &str, client: &mut Arc<Docker>) {
     client
         .start_container(name, None::<StartContainerOptions<String>>)
+        .await
+        .unwrap();
+}
+
+/// Puts input files into the container
+async fn insert_input(name: &str, client: &mut Arc<Docker>, input: &Input) {
+    let mut tar = tar::Builder::new(Vec::new());
+
+    let content = input.fetch().await.unwrap();
+
+    let tar_path = input.path().trim_start_matches('/');
+
+    // Create a header with the full path
+    let mut header = tar::Header::new_gnu();
+    header.set_path(tar_path).unwrap();
+    header.set_size(content.len() as u64);
+    header.set_mode(0o644); // Set appropriate permissions
+    header.set_cksum();
+
+    // Append the file to the tar archive
+    tar.append_data(&mut header, tar_path, Cursor::new(content))
+        .unwrap();
+
+    let tar_contents = tar.into_inner().unwrap();
+
+    // Upload to the root of the container
+    client
+        .upload_to_container(
+            name,
+            Some(UploadToContainerOptions {
+                path: "/",
+                ..Default::default()
+            }),
+            tar_contents.into(),
+        )
         .await
         .unwrap();
 }
