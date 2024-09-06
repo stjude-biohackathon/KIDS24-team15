@@ -1,11 +1,9 @@
-## This is a demonstration of evaluating WDL and running a task using crankshaft.
-
 version 1.2
 
 task samtools_flagstat {
     input {
         String url
-        Int count = 100000
+        Int count
     }
 
     command <<<
