@@ -6,6 +6,8 @@ use std::time::Duration;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
 use futures::FutureExt as _;
+use rand::thread_rng;
+use rand::Rng;
 use reqwest::header;
 use tes::Client;
 use tokio::sync::oneshot::Sender;
@@ -29,6 +31,8 @@ pub type Result<T> = std::result::Result<T, BoxedError>;
 pub struct Tes {
     /// A handle to the inner TES client.
     client: Arc<Client>,
+    /// Time to sleep in between status checks
+    sleep_time: u64,
 }
 
 impl Tes {
@@ -46,8 +50,12 @@ impl Tes {
 
         let inner = Client::new(&url, headers).unwrap();
 
+        let mut rng = thread_rng();
+        let sleep_time = rng.gen_range(100..300);
+
         Ok(Self {
             client: Arc::new(inner),
+            sleep_time,
         })
     }
 }
@@ -74,6 +82,7 @@ impl Backend for Tes {
             ..Default::default()
         };
 
+        let sleep = self.sleep_time;
         async move {
             let task_id = client.create_task(task).await.unwrap();
 
@@ -84,7 +93,7 @@ impl Backend for Tes {
                             break;
                         }
 
-                        tokio::time::sleep(Duration::from_millis(200)).await;
+                        tokio::time::sleep(Duration::from_millis(sleep)).await;
                     }
                 }
             }
