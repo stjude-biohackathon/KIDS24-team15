@@ -1,11 +1,6 @@
-<<<<<<< Updated upstream
-/target
+target
 Cargo.lock
-!/tes-client/Cargo.lock
 .idea/
 
 stderr.txt
 stdout.txt
-=======
-/target
->>>>>>> Stashed changes

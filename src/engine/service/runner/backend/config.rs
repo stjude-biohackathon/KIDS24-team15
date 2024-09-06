@@ -25,7 +25,7 @@ pub(crate) fn substitute_placeholders(s: &str, substitutions: &HashMap<String, S
 }
 
 /// Configuration for an arbitrary backend
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Config {
     /// The backend's name
     pub name: String,
@@ -81,7 +81,7 @@ impl Config {
 }
 
 /// An enum representing extra metadata supplied in the config file depending on the kind of backend
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(tag = "kind")]
 pub enum BackendType {
     /// Generic backend config, will contain the shell script string for submitting
@@ -91,7 +91,7 @@ pub enum BackendType {
 }
 
 /// Extra attributes for Generic Backends
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct GenericBackendConfig {
     /// The script command that will be run on submit
     pub submit: String,
@@ -106,7 +106,7 @@ pub struct GenericBackendConfig {
 }
 
 /// Extra attributes for Docker backends
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct DockerBackendConfig;
 
 #[cfg(test)]

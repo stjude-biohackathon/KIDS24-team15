@@ -9,7 +9,7 @@ use crate::engine::service::runner::backend;
 
 /// The config loaded from a global file.
 /// Currently contains just a list of available backends
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct Config {
     /// All backends that exist
     pub backends: Vec<backend::Config>,

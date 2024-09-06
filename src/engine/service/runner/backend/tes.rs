@@ -7,9 +7,7 @@ use async_trait::async_trait;
 use futures::future::BoxFuture;
 use futures::FutureExt as _;
 use reqwest::header;
-use tes_client::TesExecutor;
-use tes_client::TesHttpClient;
-use tes_client::TesTask;
+use tes::Client;
 use tokio::sync::oneshot::Sender;
 
 use crate::engine::service::runner::backend::Backend;
@@ -30,7 +28,7 @@ pub type Result<T> = std::result::Result<T, BoxedError>;
 #[derive(Debug)]
 pub struct Tes {
     /// A handle to the inner TES client.
-    client: Arc<TesHttpClient>,
+    client: Arc<Client>,
 }
 
 impl Tes {
@@ -46,7 +44,7 @@ impl Tes {
             header::HeaderValue::from_static("value"),
         );
 
-        let inner = TesHttpClient::new(&url, headers).unwrap();
+        let inner = Client::new(&url, headers).unwrap();
 
         Ok(Self {
             client: Arc::new(inner),
@@ -65,10 +63,10 @@ impl Backend for Tes {
     fn run(&self, _: Task, cb: Sender<Reply>) -> BoxFuture<'static, ()> {
         let client = self.client.clone();
 
-        let task = TesTask {
+        let task = tes::Task {
             name: Some("Hello World".to_string()),
             description: Some("Hello World, inspired by Funnel's most basic example".to_string()),
-            executors: vec![TesExecutor {
+            executors: vec![tes::task::Executor {
                 image: "alpine".to_string(),
                 command: vec!["echo".to_string(), "TESK says: Hello World".to_string()],
                 ..Default::default()
