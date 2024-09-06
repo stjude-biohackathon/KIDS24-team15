@@ -27,7 +27,7 @@ async fn main() {
         .expect("at least one generic backend config to be present in the config");
 
     let backend = GenericBackend::try_from(config).expect("parsing the backend configuration");
-    let mut engine = Engine::default().with_backend("generic", backend.to_runner());
+    let mut engine = Engine::empty().with_backend("generic", backend.to_runner());
 
     let task = Task::builder()
         .name("my-example-task")
@@ -35,7 +35,7 @@ async fn main() {
         .extend_executions(vec![Execution::builder()
             .working_directory(".")
             .image("ubuntu")
-            .args(&[String::from("echo"), String::from("'hello, world!'")])
+            .args(&[String::from("echo"), String::from("'hello world from LSF'")])
             .stdout("stdout.txt")
             .stderr("stderr.txt")
             .try_build()
@@ -43,7 +43,7 @@ async fn main() {
         .try_build()
         .unwrap();
 
-    let receivers = (0..1000)
+    let receivers = (0..10000)
         .map(|_| engine.submit("generic", task.clone()).callback)
         .collect::<Vec<_>>();
 
