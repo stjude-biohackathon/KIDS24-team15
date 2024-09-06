@@ -4,3 +4,6 @@ Cargo.lock
 
 stderr.txt
 stdout.txt
+/target
+rustup-init.exe
+src/main_worked.rs
