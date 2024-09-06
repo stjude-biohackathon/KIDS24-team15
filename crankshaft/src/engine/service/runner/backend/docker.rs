@@ -7,6 +7,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use bollard::container::Config;
 use bollard::container::CreateContainerOptions;
+use bollard::container::KillContainerOptions;
 use bollard::container::LogOutput;
 use bollard::container::StartContainerOptions;
 use bollard::container::UploadToContainerOptions;
@@ -113,6 +114,10 @@ impl Backend for DockerBackend {
                 let exec_result = container_exec(&name, execution, &mut client).await;
 
                 if cleanup {
+                    client
+                        .kill_container(&name, None::<KillContainerOptions<String>>)
+                        .await
+                        .unwrap();
                     client.remove_container(&name, None).await.unwrap();
                 }
 

@@ -7,12 +7,13 @@ use petgraph::{
     algo::{has_path_connecting, toposort},
     graph::{DiGraph, NodeIndex},
 };
+use wdl_analysis::types::{Coercible, Type, Types};
 use wdl_ast::{
     v1::{
         CommandPart, CommandSection, Decl, HintsSection, NameRef, RequirementsSection,
         RuntimeSection, TaskDefinition, TaskItem,
     },
-    AstNode, AstToken, Diagnostic, Ident, SyntaxNode, TokenStrHash,
+    AstNode, AstNodeExt, AstToken, Diagnostic, Ident, Span, SyntaxNode, TokenStrHash,
 };
 
 use crate::{util::strip_leading_whitespace, v1::ExprEvaluator, Runtime, Value};
@@ -24,6 +25,22 @@ fn missing_input(task: &str, input: &Ident) -> Diagnostic {
         input = input.as_str()
     ))
     .with_label("a value must be specified for this input", input.span())
+}
+
+/// Creates a "input type mismatch" diagnostic.
+fn input_type_mismatch(
+    types: &Types,
+    name: &str,
+    expected: Type,
+    actual: Type,
+    span: Span,
+) -> Diagnostic {
+    Diagnostic::error(format!(
+        "type mismatch for input `{name}`: expected type `{expected}`, but found type `{actual}`",
+        expected = expected.display(types),
+        actual = actual.display(types),
+    ))
+    .with_label("the expected input type", span)
 }
 
 /// Represents a node in an evaluation graph.
@@ -255,7 +272,7 @@ pub struct EvaluatedTask<'a> {
     /// The evaluated command text (i.e. bash script) to use for executing the task.
     command: String,
     /// The evaluated requirements for running the command.
-    requirements: IndexMap<String, Value>,
+    requirements: IndexMap<TokenStrHash<Ident>, Value>,
     /// The evaluated hints for running the command.
     hints: IndexMap<String, Value>,
     /// The map from input paths to localized paths within the execution environment.
@@ -295,7 +312,7 @@ impl<'a> EvaluatedTask<'a> {
     }
 
     /// The evaluated requirements for running the command.
-    pub fn requirements(&self) -> &IndexMap<String, Value> {
+    pub fn requirements(&self) -> &IndexMap<TokenStrHash<Ident>, Value> {
         &self.requirements
     }
 
@@ -369,7 +386,32 @@ impl TaskEvaluator {
                 GraphNode::Input(decl) => {
                     let name = decl.name();
                     if let Some(value) = inputs.get(name.as_str()) {
-                        evaluated.scope.insert(TokenStrHash::new(name), *value);
+                        if let Some(n) = runtime
+                            .document()
+                            .task_by_name(self.name.as_str())
+                            .expect("should have task scope")
+                            .lookup(name.as_str())
+                        {
+                            if let Some(ty) = n.ty() {
+                                let ty = runtime.import_type(ty);
+                                if !value.ty().is_coercible_to(runtime.types(), &ty) {
+                                    return Err(input_type_mismatch(
+                                        runtime.types(),
+                                        name.as_str(),
+                                        ty,
+                                        value.ty(),
+                                        decl.ty().span(),
+                                    ));
+                                }
+
+                                evaluated.scope.insert(TokenStrHash::new(name), *value);
+                            } else {
+                                todo!("handle unknown type");
+                            }
+                        } else {
+                            // Handle specified input that is not a task input
+                            todo!("handle extra specified input");
+                        }
                     } else {
                         // Check to see if the declaration was unbound; if so, it may be required if the declared type is not optional
                         if let Decl::Unbound(decl) = decl {
@@ -384,7 +426,7 @@ impl TaskEvaluator {
                     }
                 }
                 GraphNode::Decl(_) => continue,
-                _ => break,
+                _ => continue,
             }
         }
 
@@ -403,8 +445,17 @@ impl TaskEvaluator {
                     let value = evaluator.evaluate_expr(runtime, &expr)?;
                     evaluated.scope.insert(TokenStrHash::new(name), value);
                 }
-                GraphNode::Requirements(_) => {
-                    // TODO: implement
+                GraphNode::Requirements(section) => {
+                    for item in section.items() {
+                        let name = item.name();
+                        let expr = item.expr();
+
+                        let evaluator = ExprEvaluator::new(&evaluated.scope);
+                        let value = evaluator.evaluate_expr(runtime, &expr)?;
+                        evaluated
+                            .requirements
+                            .insert(TokenStrHash::new(name), value);
+                    }
                 }
                 GraphNode::Runtime(_) => {
                     // TODO: implement
