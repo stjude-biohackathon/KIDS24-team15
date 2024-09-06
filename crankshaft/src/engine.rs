@@ -60,6 +60,7 @@ impl Engine {
         );
 
         let mut count = 1;
+        task_completion_bar.inc(0);
 
         while let Some(()) = self.runner.tasks.next().await {
             task_completion_bar.set_message(format!("task #{}", count));
