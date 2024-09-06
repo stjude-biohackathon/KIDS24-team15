@@ -5,10 +5,11 @@ version 1.2
 task samtools_flagstat {
     input {
         String url
+        Int count = 100000
     }
 
     command <<<
-        samtools flagstat <(wget -O - -q '~{url}' | samtools view -h | head -n 100000)
+        samtools flagstat <(wget -O - -q '~{url}' | samtools view -h | head -n ~{count})
     >>>
 
     requirements {
