@@ -1,5 +1,6 @@
 //! A docker runner service.
 
+use std::str::FromStr;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -10,8 +11,10 @@ use bollard::container::LogsOptions;
 use bollard::container::StartContainerOptions;
 use bollard::container::WaitContainerOptions;
 use bollard::errors::Error;
+use bollard::models::HostConfig;
+use bollard::models::Mount;
+use bollard::models::MountTypeEnum;
 use bollard::secret::ContainerWaitResponse;
-use bollard::secret::HostConfig;
 use bollard::Docker;
 use futures::future::BoxFuture;
 use futures::FutureExt;
@@ -19,6 +22,8 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use nonempty::NonEmpty;
 use random_word::Lang;
+use tempfile::TempDir;
+use tmp_mount::TmpMount;
 use tokio::sync::oneshot::Sender;
 
 use crate::engine::service::runner::backend::Backend;
@@ -28,11 +33,16 @@ use crate::engine::task::Execution;
 use crate::engine::task::Resources;
 use crate::engine::Task;
 
+pub mod tmp_mount;
+
 /// The number of parts in the random name of each Docker container.
 pub const NAME_PARTS: usize = 4;
 
 /// The separator between each random part of the Docker container name.
 pub const NAME_SEPARATOR: &str = "-";
+
+/// The working dir name inside the docker container
+pub const WORKDIR: &str = "/workdir";
 
 /// A [`Result`](std::result::Result) with an [`Error`]
 pub type Result<T> = std::result::Result<T, Error>;
@@ -62,10 +72,31 @@ impl Backend for Runner {
         async move {
             let mut results: Option<NonEmpty<ExecutionResult>> = None;
 
+            // Generate mounts to be shared among tasks
+            let tmp_mounts: Vec<TmpMount> = task
+                .volumes()
+                .into_iter()
+                .flatten()
+                .map(|s| TmpMount::from_str(s).unwrap())
+                .collect();
+
+            let mounts: Vec<Mount> = tmp_mounts.iter().map(|tm| tm.into()).collect();
+
             for execution in task.executions() {
                 let name = random_name();
 
-                container_create(&name, execution, task.resources(), &mut client).await;
+                let tmp_dir = TempDir::new().unwrap();
+                let workdir_path = tmp_dir.path().to_str().unwrap();
+
+                container_create(
+                    &name,
+                    execution,
+                    task.resources(),
+                    &mut client,
+                    workdir_path,
+                    &mounts[..],
+                )
+                .await;
                 container_start(&name, &mut client).await;
 
                 let logs = configure_logs(&name, execution, &mut client);
@@ -149,7 +180,26 @@ async fn container_create(
     execution: &Execution,
     resources: Option<&Resources>,
     client: &mut Arc<Docker>,
+    workdir_path: &str,
+    mounts: &[Mount],
 ) {
+    // Create a local tmpdir mount for the working directory
+    let workdir_mount = Mount {
+        target: Some(WORKDIR.to_string()),
+        source: Some(workdir_path.to_string()),
+        typ: Some(MountTypeEnum::BIND),
+        ..Default::default()
+    };
+
+    // Configure Docker to use all mounts
+    let mut final_mounts = Vec::with_capacity(1 + mounts.len());
+    final_mounts.push(workdir_mount);
+    final_mounts.extend_from_slice(mounts);
+    let host_config = HostConfig {
+        mounts: Some(final_mounts),
+        ..resources.map(HostConfig::from).unwrap_or_default()
+    };
+
     let options = Some(CreateContainerOptions {
         name,
         ..Default::default()
@@ -158,7 +208,8 @@ async fn container_create(
     let config = Config {
         image: Some(execution.image()),
         cmd: Some(execution.args().into_iter().map(|s| s.as_str()).collect()),
-        host_config: resources.map(HostConfig::from),
+        host_config: Some(host_config),
+        working_dir: Some(WORKDIR),
         ..Default::default()
     };
 

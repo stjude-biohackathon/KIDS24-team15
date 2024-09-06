@@ -56,6 +56,9 @@ pub struct Builder {
 
     /// The list of [`Executor`]s.
     executors: Option<NonEmpty<Execution>>,
+
+    /// The list of volumes shared among executions
+    volumes: Option<NonEmpty<String>>,
 }
 
 impl Builder {
@@ -171,6 +174,32 @@ impl Builder {
         Ok(self)
     }
 
+    /// Attempts to extend volumes within the [`Builder`].
+    pub fn extend_volumes<Iter>(mut self, volumes: Iter) -> Result<Self>
+    where
+        Iter: IntoIterator<Item = String>,
+    {
+        let mut new = volumes.into_iter();
+
+        self.volumes = match self.volumes {
+            Some(mut volumes) => {
+                volumes.extend(new);
+                Some(volumes)
+            }
+            None => {
+                if let Some(volume) = new.next() {
+                    let mut volumes: NonEmpty<_> = NonEmpty::new(volume);
+                    volumes.extend(new);
+                    Some(volumes)
+                } else {
+                    None
+                }
+            }
+        };
+
+        Ok(self)
+    }
+
     /// Consumes `self` and attempts to return a built [`Task`].
     pub fn try_build(self) -> Result<Task> {
         let executors = self
@@ -185,6 +214,7 @@ impl Builder {
             outputs: self.outputs,
             resources: self.resources,
             executions: executors,
+            volumes: self.volumes,
         })
     }
 }
