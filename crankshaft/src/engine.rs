@@ -4,6 +4,8 @@ pub mod config;
 pub mod service;
 pub mod task;
 
+use std::time::Duration;
+
 use futures::StreamExt;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
@@ -61,6 +63,7 @@ impl Engine {
 
         let mut count = 1;
         task_completion_bar.inc(0);
+        task_completion_bar.enable_steady_tick(Duration::from_millis(100));
 
         while let Some(()) = self.runner.tasks.next().await {
             task_completion_bar.set_message(format!("task #{}", count));
