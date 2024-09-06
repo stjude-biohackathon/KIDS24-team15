@@ -1,4 +1,4 @@
-//! An example for runner a task using the Docker backend service.
+//! An example for runner a task using the generic LSF backend service.
 
 use crankshaft::engine::task::Execution;
 use crankshaft::engine::Engine;
@@ -45,8 +45,11 @@ async fn main() {
         .try_build()
         .unwrap();
 
-    let receivers = (0..10)
-        .map(|_| engine.submit(task.clone()).callback)
+    let receivers = (0..1000)
+        .map(|i| {
+            println!("Submitting task number: {}", i);
+            engine.submit(task.clone()).callback
+        })
         .collect::<Vec<_>>();
 
     engine.run().await;
