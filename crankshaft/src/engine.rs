@@ -4,7 +4,9 @@ pub mod config;
 pub mod service;
 pub mod task;
 
-use futures::future::join_all;
+use futures::StreamExt;
+use indicatif::ProgressBar;
+use indicatif::ProgressStyle;
 pub use task::Task;
 use tracing::debug;
 
@@ -43,12 +45,33 @@ impl Engine {
     /// for the result of the job.
     pub fn submit(&mut self, task: Task) -> Handle {
         debug!(task = ?task);
+        println!(
+            "[+] Submitted Task {} to be executed",
+            task.name().unwrap_or("")
+        );
         self.runner.submit(task)
     }
 
     /// Runs all of the tasks scheduled in the engine.
-    pub async fn run(self) {
-        join_all(self.runner.tasks).await;
+    pub async fn run(&mut self) {
+        let task_completion_bar = ProgressBar::new(self.runner.tasks.len() as u64);
+        task_completion_bar.set_style(
+            ProgressStyle::with_template(
+                "{spinner:.cyan/blue} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos:>7}/{len:7} {msg}",
+            )
+            .unwrap()
+            .progress_chars("#>-"),
+        );
+
+        let mut count = 1;
+
+        while let Some(()) = self.runner.tasks.next().await {
+            task_completion_bar.set_message(format!("task #{}", count));
+            task_completion_bar.inc(1);
+            count += 1;
+        }
+
+        task_completion_bar.finish_with_message("All jobs complete.");
     }
 }
 
