@@ -35,10 +35,8 @@ async fn main() {
     let task = Task::builder()
         .name("my-example-task")
         .description("a longer description")
-        .unwrap()
         .extend_inputs(vec![input])
-        .unwrap()
-        .extend_executors(vec![
+        .extend_executions(vec![
             Execution::builder()
                 .image("ubuntu")
                 .args(&[
@@ -54,7 +52,6 @@ async fn main() {
                 .try_build()
                 .unwrap(),
         ])
-        .unwrap()
         .extend_volumes(vec!["/volA".to_string(), "/volB".to_string()])
         .try_build()
         .unwrap();

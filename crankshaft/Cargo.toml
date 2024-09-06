@@ -33,6 +33,7 @@ wdl-grammar = { workspace = true }
 wdl-ast = { workspace = true }
 wdl-analysis = { workspace = true }
 anyhow = { workspace = true }
+tar.workspace = true
 
 [lints.rust]
 missing_docs = "warn"
