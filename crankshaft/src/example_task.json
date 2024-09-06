@@ -1,7 +1,5 @@
-Running task defined in file: example_task.json
-File content:
 {
     "name": "Sample Task",
-    "command": "echo Hello, world!"
+    "command": "echo Hello, json unput!"
 }
 

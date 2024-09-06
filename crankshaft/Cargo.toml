@@ -28,7 +28,10 @@ toml = "0.8.19"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 url = "2.5.2"
-
+wdl-grammar = "0.7.0"   
+wdl-ast = "0.6.0"       
+wdl-analysis = "0.2.0" 
+  
 [lints.rust]
 missing_docs = "warn"
 nonstandard-style = "warn"

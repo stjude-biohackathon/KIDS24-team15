@@ -1,0 +1,3 @@
+name: Sample Task
+command: echo Hello, YAML file input!
+
