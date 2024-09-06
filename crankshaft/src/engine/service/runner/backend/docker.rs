@@ -7,22 +7,19 @@ use async_trait::async_trait;
 use bollard::container::Config;
 use bollard::container::CreateContainerOptions;
 use bollard::container::LogOutput;
-use bollard::container::LogsOptions;
+use bollard::container::RemoveContainerOptions;
 use bollard::container::StartContainerOptions;
-use bollard::container::WaitContainerOptions;
 use bollard::errors::Error;
+use bollard::exec::CreateExecOptions;
+use bollard::exec::StartExecResults;
 use bollard::models::HostConfig;
 use bollard::models::Mount;
-use bollard::models::MountTypeEnum;
-use bollard::secret::ContainerWaitResponse;
 use bollard::Docker;
 use futures::future::BoxFuture;
 use futures::FutureExt;
-use futures::StreamExt;
 use futures::TryStreamExt;
 use nonempty::NonEmpty;
 use random_word::Lang;
-use tempfile::TempDir;
 use tmp_mount::TmpMount;
 use tokio::sync::oneshot::Sender;
 
@@ -85,72 +82,36 @@ impl Backend for Runner {
             for execution in task.executions() {
                 let name = random_name();
 
-                let tmp_dir = TempDir::new().unwrap();
-                let workdir_path = tmp_dir.path().to_str().unwrap();
+                // Create the container
+                container_create(&name, execution, task.resources(), &mut client, &mounts[..])
+                    .await;
 
-                container_create(
-                    &name,
-                    execution,
-                    task.resources(),
-                    &mut client,
-                    workdir_path,
-                    &mounts[..],
-                )
-                .await;
+                // Start the container
                 container_start(&name, &mut client).await;
 
-                let logs = configure_logs(&name, execution, &mut client);
-                let mut wait = configure_wait(&name, &mut client);
+                // Run a command
+                let exec_result = container_exec(&name, execution, &mut client).await;
 
-                // Process logs until they stop when container stops
-                let (stdout, stderr) = logs
-                    .try_fold(
-                        (String::with_capacity(1 << 8), String::with_capacity(1 << 8)),
-                        |(mut stdout, mut stderr), log| async move {
-                            match log {
-                                LogOutput::StdOut { message } => {
-                                    stdout.push_str(&String::from_utf8_lossy(&message));
-                                }
-                                LogOutput::StdErr { message } => {
-                                    stderr.push_str(&String::from_utf8_lossy(&message));
-                                }
-                                _ => {}
-                            }
-                            Ok((stdout, stderr))
-                        },
+                // Export outputs
+
+                // remove the container
+                client
+                    .remove_container(
+                        &name,
+                        Some(RemoveContainerOptions {
+                            force: true,
+                            ..Default::default()
+                        }),
                     )
                     .await
-                    .unwrap_or_else(|e| {
-                        eprintln!("Error collecting logs: {:?}", e);
-                        (String::new(), String::new())
-                    });
-
-                // Process container stop
-                let status = wait
-                    .next()
-                    .await
-                    .transpose()
-                    .unwrap_or_else(|e| {
-                        eprintln!("Error waiting for container: {:?}", e);
-                        None
-                    })
-                    .map(|response| response.status_code)
-                    .unwrap_or(-1);
-
-                client.remove_container(&name, None).await.unwrap();
-
-                let result = ExecutionResult {
-                    status,
-                    stdout,
-                    stderr,
-                };
+                    .unwrap();
 
                 results = match results {
                     Some(mut results) => {
-                        results.push(result);
+                        results.push(exec_result);
                         Some(results)
                     }
-                    None => Some(NonEmpty::new(result)),
+                    None => Some(NonEmpty::new(exec_result)),
                 }
             }
 
@@ -180,23 +141,11 @@ async fn container_create(
     execution: &Execution,
     resources: Option<&Resources>,
     client: &mut Arc<Docker>,
-    workdir_path: &str,
     mounts: &[Mount],
 ) {
-    // Create a local tmpdir mount for the working directory
-    let workdir_mount = Mount {
-        target: Some(WORKDIR.to_string()),
-        source: Some(workdir_path.to_string()),
-        typ: Some(MountTypeEnum::BIND),
-        ..Default::default()
-    };
-
     // Configure Docker to use all mounts
-    let mut final_mounts = Vec::with_capacity(1 + mounts.len());
-    final_mounts.push(workdir_mount);
-    final_mounts.extend_from_slice(mounts);
     let host_config = HostConfig {
-        mounts: Some(final_mounts),
+        mounts: Some(mounts.to_vec()),
         ..resources.map(HostConfig::from).unwrap_or_default()
     };
 
@@ -207,9 +156,9 @@ async fn container_create(
 
     let config = Config {
         image: Some(execution.image()),
-        cmd: Some(execution.args().into_iter().map(|s| s.as_str()).collect()),
+        tty: Some(true),
         host_config: Some(host_config),
-        working_dir: Some(WORKDIR),
+        working_dir: execution.workdir().map(|s| s.as_str()),
         ..Default::default()
     };
 
@@ -224,26 +173,65 @@ async fn container_start(name: &str, client: &mut Arc<Docker>) {
         .unwrap();
 }
 
-/// Configures the log stream for the Docker container.
-fn configure_logs(
+/// Execute a command in container, returning an ExecutionResult
+async fn container_exec(
     name: &str,
     execution: &Execution,
     client: &mut Arc<Docker>,
-) -> impl futures::Stream<Item = std::result::Result<LogOutput, Error>> {
-    let options = LogsOptions::<String> {
-        follow: true,
-        stdout: execution.stdout().is_some(),
-        stderr: execution.stderr().is_some(),
-        ..Default::default()
+) -> ExecutionResult {
+    let exec_id = client
+        .create_exec(
+            name,
+            CreateExecOptions {
+                attach_stdout: Some(true),
+                attach_stderr: Some(true),
+                cmd: Some(execution.args().into_iter().map(|s| s.as_str()).collect()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap()
+        .id;
+
+    let log_stream = if let StartExecResults::Attached { output, .. } =
+        client.start_exec(&exec_id, None).await.unwrap()
+    {
+        output
+    } else {
+        unreachable!();
     };
 
-    client.logs(name, Some(options))
-}
+    // Process logs
+    let (stdout, stderr) = log_stream
+        .try_fold(
+            (String::with_capacity(1 << 8), String::with_capacity(1 << 8)),
+            |(mut stdout, mut stderr), log| async move {
+                match log {
+                    LogOutput::StdOut { message } => {
+                        stdout.push_str(&String::from_utf8_lossy(&message));
+                    }
+                    LogOutput::StdErr { message } => {
+                        stderr.push_str(&String::from_utf8_lossy(&message));
+                    }
+                    _ => {}
+                }
+                Ok((stdout, stderr))
+            },
+        )
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Error collecting logs: {:?}", e);
+            (String::new(), String::new())
+        });
 
-/// Configures the waiting stream for the Docker container.
-fn configure_wait(
-    name: &str,
-    client: &mut Arc<Docker>,
-) -> impl futures::Stream<Item = std::result::Result<ContainerWaitResponse, Error>> {
-    client.wait_container(name, None::<WaitContainerOptions<String>>)
+    // Get return code
+    // Get the exit code
+    let exec_inspect = client.inspect_exec(&exec_id).await.unwrap();
+    let status = exec_inspect.exit_code.unwrap_or(-1);
+
+    ExecutionResult {
+        status,
+        stdout,
+        stderr,
+    }
 }
