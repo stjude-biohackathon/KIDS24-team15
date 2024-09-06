@@ -70,8 +70,6 @@ impl Engine {
             task_completion_bar.inc(1);
             count += 1;
         }
-
-        task_completion_bar.finish_with_message("All jobs complete.");
     }
 }
 
