@@ -2,8 +2,8 @@
 
 use reqwest::header;
 use reqwest::header::HeaderMap;
-use reqwest::Error;
 use reqwest::StatusCode;
+use reqwest_middleware::Error;
 
 pub mod responses;
 pub mod task;
@@ -20,7 +20,7 @@ pub struct Client {
     url: String,
 
     /// The client.
-    client: reqwest::Client,
+    client: reqwest_middleware::ClientWithMiddleware,
 }
 
 impl Client {
@@ -29,9 +29,15 @@ impl Client {
         let url = url.into();
         let headers = headers.into();
 
-        let client = reqwest::Client::builder()
+        let reqwest_client = reqwest::ClientBuilder::new()
             .default_headers(headers)
-            .build()?;
+            .build()
+            .unwrap();
+
+        let retry_policy = reqwest_retry::policies::ExponentialBackoff::builder().build_with_max_retries(3);
+        let client = reqwest_middleware::ClientBuilder::new(reqwest_client)
+            .with(reqwest_retry::RetryTransientMiddleware::new_with_policy(retry_policy))
+            .build();
 
         Ok(Self { url, client })
     }

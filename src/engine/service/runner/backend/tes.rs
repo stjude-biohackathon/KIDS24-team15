@@ -40,8 +40,8 @@ impl Tes {
 
         let mut headers = header::HeaderMap::new();
         headers.insert(
-            "X-Pinggy-No-Screen",
-            header::HeaderValue::from_static("value"),
+            "Authorization",
+            header::HeaderValue::from_static("Basic dGVzLXJ1bm5lcjowd15rbTZsNkM4fD8="),
         );
 
         let inner = Client::new(&url, headers).unwrap();
@@ -54,7 +54,7 @@ impl Tes {
 
 impl Default for Tes {
     fn default() -> Self {
-        Self::try_new("http://localhost:8080/ga4gh/tes/v1/").unwrap()
+        Self::try_new("http://tes.staging.stjude.cloud/v1/").unwrap()
     }
 }
 
@@ -84,7 +84,7 @@ impl Backend for Tes {
                             break;
                         }
 
-                        tokio::time::sleep(Duration::from_millis(200)).await;
+                        tokio::time::sleep(Duration::from_millis(250)).await;
                     }
                 }
             }
