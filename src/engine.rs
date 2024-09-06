@@ -21,20 +21,20 @@ pub struct Engine {
 }
 
 impl Engine {
+    /// Gets an engine with a generic [`Runner`].
+    pub fn with_runner(runner: Runner) -> Self {
+        Self { runner }
+    }
+
     /// Gets an engine with a Docker backend.
     pub fn with_docker() -> docker::Result<Self> {
         let docker = docker::Runner::try_new()?;
-
-        Ok(Self {
-            runner: Runner::new(docker),
-        })
+        Ok(Self::with_runner(Runner::new(docker)))
     }
 
     /// Gets an engine with a default TES backend.
     pub fn with_default_tes() -> Self {
-        Self {
-            runner: Runner::new(tes::Tes::default()),
-        }
+        Self::with_runner(Runner::new(tes::Tes::default()))
     }
 
     /// Submits a [`Task`] to be executed.
