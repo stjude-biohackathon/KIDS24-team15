@@ -45,10 +45,6 @@ impl Engine {
     /// for the result of the job.
     pub fn submit(&mut self, task: Task) -> Handle {
         debug!(task = ?task);
-        println!(
-            "[+] Submitted Task {} to be executed",
-            task.name().unwrap_or("")
-        );
         self.runner.submit(task)
     }
 
