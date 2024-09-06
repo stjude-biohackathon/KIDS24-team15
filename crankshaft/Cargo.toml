@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+indicatif = { workspace = true }
 tes = { path = "../tes", version = "0.1.0" }
 async-trait = { workspace = true }
 bollard = { workspace = true }
