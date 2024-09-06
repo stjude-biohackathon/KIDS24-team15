@@ -24,19 +24,33 @@ fn main() {
 
     if let Some(task_file) = matches.get_one::<String>("file") {
         if let Ok(content) = fs::read_to_string(task_file) {
-            let task: Result<Task, Box<dyn std::error::Error>> = if task_file.ends_with(".yaml") || task_file.ends_with(".yml") {
-                serde_yaml::from_str(&content).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
-            } else if task_file.ends_with(".json") {
-                serde_json::from_str(&content).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
-            } else {
-                Err("Unsupported file format".into())
-            };
+            let task: Result<Task, Box<dyn std::error::Error>> =
+                if task_file.ends_with(".yaml") || task_file.ends_with(".yml") {
+                    serde_yaml::from_str(&content)
+                        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+                } else if task_file.ends_with(".json") {
+                    serde_json::from_str(&content)
+                        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+                } else {
+                    Err("Unsupported file format".into())
+                };
 
             if let Ok(task) = task {
-                let shell = if cfg!(target_os = "windows") { "cmd" } else { "sh" };
-                let arg = if cfg!(target_os = "windows") { "/C" } else { "-c" };
+                let shell = if cfg!(target_os = "windows") {
+                    "cmd"
+                } else {
+                    "sh"
+                };
+                let arg = if cfg!(target_os = "windows") {
+                    "/C"
+                } else {
+                    "-c"
+                };
 
-		let _ = ProcessCommand::new(shell).arg(arg).arg(&task.command).status();
+                let _ = ProcessCommand::new(shell)
+                    .arg(arg)
+                    .arg(&task.command)
+                    .status();
             }
         }
     }

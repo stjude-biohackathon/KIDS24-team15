@@ -1,10 +1,10 @@
 //! A testing implementation for a `sprocket run` command.
 
+use anyhow::Result;
 use clap::{Arg, Command};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use wdl_analysis::Analyzer;
-use anyhow::Result;
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Task {
