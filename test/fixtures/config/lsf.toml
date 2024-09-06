@@ -1,4 +1,4 @@
-[[Backends]]
+[[backends]]
 name = "LSF"
 kind = "Generic"
 submit = """

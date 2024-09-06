@@ -117,48 +117,42 @@ mod tests {
 
     #[test]
     fn simple_generic_config_loads_and_runs() {
-        let config = Config::load_from_file("configs/generic_simple.toml")
-            .expect("load from example config");
+        let config = Config::fixture("generic.toml").unwrap();
         let backend = &config.backends[0];
         let mut substitutions = HashMap::new();
         substitutions.insert("name".to_string(), "Kids24".to_string());
 
         let output = backend.submit(&mut substitutions);
-        assert_eq!(output.stdout, b"Hello Kids24\n");
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        assert_eq!(&stdout, "Hello Kids24\n");
     }
 
     #[test]
     fn generic_config_with_defaults_uses_them() {
-        let config = Config::load_from_file("configs/generic_simple.toml")
-            .expect("load from example config");
+        let config = Config::fixture("generic.toml").unwrap();
         let backend = &config.backends[1];
         let mut substitutions = HashMap::new();
 
         let output = backend.submit(&mut substitutions);
-        assert_eq!(
-            &String::from_utf8(output.stdout).unwrap(),
-            "I have 4096 mb of ram\n"
-        );
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        assert_eq!(&stdout, "I have 4096 mb of ram\n");
     }
 
     #[test]
     fn generic_config_with_defaults_and_parameters_set_uses_parameters() {
-        let config = Config::load_from_file("configs/generic_simple.toml")
-            .expect("load from example config");
+        let config = Config::fixture("generic.toml").unwrap();
         let backend = &config.backends[1];
         let mut substitutions = HashMap::new();
         substitutions.insert("ram".to_string(), 2.to_string());
 
         let output = backend.submit(&mut substitutions);
-        assert_eq!(
-            &String::from_utf8(output.stdout).unwrap(),
-            "I have 2 mb of ram\n"
-        );
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        assert_eq!(&stdout, "I have 2 mb of ram\n");
     }
 
     #[test]
     fn lsf_example() {
-        let config = Config::load_from_file("configs/lsf.toml").expect("Load from example config");
+        let config = Config::fixture("lsf.toml").unwrap();
         let backend = &config.backends[0];
         let mut substitutions = HashMap::new();
         substitutions.extend(backend.runtime_attrs.clone().unwrap());

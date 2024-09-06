@@ -1,6 +1,6 @@
 //! Global config options and loading from .crankshaft
 
-use std::path::PathBuf;
+use std::path::Path;
 
 use config::ConfigError;
 use serde::{Deserialize, Serialize};
@@ -16,24 +16,26 @@ pub struct Config {
 }
 
 impl Config {
-    /// Loads a config from the global .crankshaft file found in the user's home directory
-    pub fn load_from_global_config() -> Result<Self, ConfigError> {
-        let home_dir = dirs::home_dir().unwrap();
-        let config_path = home_dir.join(".crankshaft");
+    /// Loads a new configuration file from a path.
+    pub fn new(path: impl AsRef<Path>) -> Result<Self, ConfigError> {
+        let path = path.as_ref();
+        let file = config::File::<_, _>::from(path);
 
-        Self::load_from_file(config_path)
+        let settings = config::Config::builder().add_source(file);
+        settings.build()?.try_deserialize()
     }
 
-    /// Loads a config file from a given path
-    pub fn load_from_file<P>(path: P) -> Result<Self, ConfigError>
-    where
-        P: Into<PathBuf>,
-    {
-        let path = path.into();
-        let config_file: config::File<_, _> = path.into();
+    /// Loads a config from a test fixture.
+    #[cfg(test)]
+    pub fn fixture(path: impl AsRef<Path>) -> Result<Self, ConfigError> {
+        use std::path::PathBuf;
 
-        let settings = config::Config::builder().add_source(config_file);
-        settings.build()?.try_deserialize()
+        let mut result = PathBuf::from(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/test/fixtures/config/",
+        ));
+        result.push(path.as_ref());
+        Self::new(result)
     }
 }
 
@@ -43,16 +45,13 @@ mod tests {
 
     #[test]
     fn loading_file_returns_valid_backends() {
-        let config =
-            Config::load_from_file("configs/example.toml").expect("Load from example config");
-
+        let config = Config::fixture("full.toml").unwrap();
         assert_eq!(config.backends.len(), 3)
     }
 
     #[test]
     fn loading_config_holds_valid_fields() {
-        let config =
-            Config::load_from_file("configs/example.toml").expect("Load from example config");
+        let config = Config::fixture("full.toml").unwrap();
         let backend = &config.backends[1];
 
         assert_eq!(backend.name, "quux");
