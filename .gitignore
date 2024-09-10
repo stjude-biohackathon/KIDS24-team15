@@ -4,6 +4,10 @@ Cargo.lock
 
 stderr.txt
 stdout.txt
+
+node_modules/
 /target
 rustup-init.exe
 src/main_worked.rs
+
+.env.*.local
